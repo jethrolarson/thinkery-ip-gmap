@@ -440,30 +440,24 @@ var PropertyWidget = new Class({
 	// </OLD CODE>
 	},
 	
-	formatWindow: function(input) {
-		var url = input.proplink;
-		var link_add =  input.street_address.clean()+', '+input.city.clean();
-		var html = '<div class="bubble">';
-		html += '<h4><a href="'+url+'">'+link_add+'</a></h4>';
-		html += '<p><b>'+langText['pid']+':</b> '+input.mls_id+'<br />';
-		html += '<b>'+langText['price']+':</b> '+input.formattedprice+'</p>';
-		if(!input.thumb){
-			html += '<div class="bubble_image"><a href="'+url+'">'+input.thumb+'</a></div>';
-			html += '<div class="bubble_desc">';
-			if(input.short_description){
-				html += input.short_description.slice(0,205)+'...';
-			}
-			html += '<a href="'+url+'">('+langText['more']+')</a>';
-			html += '</div>';
-		}else{
-			html += '<div class="bubble_desc">';
-			if(input.short_description){
-				html += input.short_description.slice(0,205)+'...';
-			}
-			html += '<a href="'+url+'">('+langText['more']+')</a>';
-			html += '</div>';
+	formatWindow: function(pin) {
+		pin.street_address = pin.street_address.clean();
+		pin.city = pin.city.clean();
+		pin.short_description = pin.short_description ? pin.short_description.slice(0,205)+'...' : '';
+		pin.thumb = pin.thumb && '<div class="bubble_image"><a href="{proplink}">{thumb}</a></div>').substitute(pin);
+		
+		html = ('<div class="bubble"><h4><a href="{proplink}">{street_address}, {city}</a></h4>' +
+			'<p><b>{langText.pid}:</b>{mls_id}<br /><b>{langText.price}:</b>'+ 
+			'{pin.formattedprice}</p>{thumb}<div class="bubble_desc">{desc}'+
+			'<a href="{url}">({langText.more})</a></div></div>'
+		).substitute(pin);
+		if(!pin.thumb){
+			html += '<div class="bubble_image"><a href="'+url+'">'+pin.thumb+'</a></div>';
 		}
-		html += '</div>';
+
+		if(pin.short_description){
+			html += ;
+		}
 		return html;
 	},
 	
