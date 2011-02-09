@@ -440,40 +440,33 @@ var PropertyWidget = new Class({
 	// </OLD CODE>
 	},
 	
-	formatWindow: function(pin) {
-		pin.street_address = pin.street_address.clean();
-		pin.city = pin.city.clean();
-		pin.short_description = pin.short_description ? pin.short_description.slice(0,205)+'...' : '';
-		pin.thumb = pin.thumb && '<div class="bubble_image"><a href="{proplink}">{thumb}</a></div>').substitute(pin);
-		
-		html = ('<div class="bubble"><h4><a href="{proplink}">{street_address}, {city}</a></h4>' +
+	getMarkerHtml: function(marker) {
+		marker.street_address = marker.street_address.clean();
+		marker.city = marker.city.clean();
+		marker.short_description = marker.short_description && (marker.short_description.slice(0,205)+'...');
+		marker.thumb = marker.thumb && ('<div class="bubble_image"><a href="{proplink}">{thumb}</a></div>').substitute(marker);
+		marker.langText = langText;//hacky copy.
+		return (
+			'<div class="bubble"><h4><a href="{proplink}">{street_address}, {city}</a></h4>' +
 			'<p><b>{langText.pid}:</b>{mls_id}<br /><b>{langText.price}:</b>'+ 
-			'{pin.formattedprice}</p>{thumb}<div class="bubble_desc">{desc}'+
+			'{formattedprice}</p>{thumb}<div class="bubble_desc">{desc}'+
 			'<a href="{url}">({langText.more})</a></div></div>'
-		).substitute(pin);
-		if(!pin.thumb){
-			html += '<div class="bubble_image"><a href="'+url+'">'+pin.thumb+'</a></div>';
-		}
-
-		if(pin.short_description){
-			html += ;
-		}
-		return html;
+		).substitute(marker);
 	},
 	
 	createMarker: function(input) {
 		if(input.lat_pos && input.long_pos){
-			var coord = new google.maps.LatLng(input.lat_pos,input.long_pos);
-			var marker = new google.maps.Marker(coord,houseIcon);
-			var html = formatWindow(input);
-			bounds.extend(coord);
+			var coord = new google.maps.LatLng(input.lat_pos,input.long_pos),
+			    marker = new google.maps.Marker(coord,houseIcon),//fixme, houseIcon global?
+			    markerHtml = getMarkerHtml(input);
+			this.bounds.extend(coord);
 			google.maps.Event.addListener(marker, "click", function() {
-				this.openInfoWindowHtml(html);
+				this.openInfoWindowHtml(markerHtml);
 			});
 
 			//create map marker based on property id
-			gmarkers[input.id] = marker;
-			htmls[input.id] = html;
+			this.gmarkers[input.id] = marker;
+			this.htmls[input.id] = markerHtml;
 			map.addOverlay(marker);
 			return marker;
 		}else{
@@ -483,18 +476,18 @@ var PropertyWidget = new Class({
 	},
 	
 	myclick: function(i) {
-		gmarkers[i].openInfoWindowHtml(htmls[i]);
+		this.gmarkers[i].openInfoWindowHtml(this.htmls[i]);
 	},
 	
 	readMap: function(data) {
-		bounds = new google.maps.LatLngBounds();
+		this.bounds = new google.maps.LatLngBounds();
 		// hide the info window, otherwise it still stays open where the removed marker used to be
-		map.getInfoWindow().hide();
-		map.clearOverlays();
+		this.mapInstance.getInfoWindow().hide();
+		this.mapInstance.clearOverlays();
 
 		// empty the arrays
-		gmarkers = [];
-		htmls = [];
+		this.gmarkers = [];
+		this.htmls = [];
 
 		//json evaluate returned data
 		jsonData = Json.evaluate(data);
@@ -508,10 +501,20 @@ var PropertyWidget = new Class({
 
 		//create sortable table list
 		listProperties(jsonData);
-		map.setZoom(map.getBoundsZoomLevel(bounds));
-		map.setCenter(bounds.getCenter());
+		this.mapInstance.setZoom(this.mapInstance.getBoundsZoomLevel(this.bounds));
+		this.mapInstance.setCenter(this.bounds.getCenter());
 	}
 	
 });
 //IpAjaxSearch.implement(new Events);
 //IpAjaxSearch.implement(new Options);
+
+/*
+Notes:
+langText is a global object. Though it's wrongly declaired as an Array. It just has localization strings for labels. 
+
+We should probably break this thing into two parts:
+1. The part that modifies and sends the ajax search
+2. The part that updates the google map and places the markers.
+
+*/
