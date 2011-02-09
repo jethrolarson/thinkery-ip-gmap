@@ -28,7 +28,7 @@ var PropertyWidget = new Class({
 		currencySymbol: '',
 		currencyPos: '',
 		currencyFormat: '',
-		noLimit: 0,
+		noLimit: 0
 		// New options:
 	},
 	
@@ -44,8 +44,9 @@ var PropertyWidget = new Class({
 					kicked off in the google maps callback
 				--- Attach the google maps object to the 'this' reference of the Class's object, use "gmap" as the property key
 		 */
+		}else{
+			this.googleCallback();
 		}
-		else this.googleCallback();
 		
 		// Slider creation needed here
 	},
@@ -65,21 +66,21 @@ var PropertyWidget = new Class({
 		this.mapInstance.setCenter(new google.maps.LatLng(this.options.latitude, this.options.longitude), (this.options.latitude && this.options.longitude) ? 13 : this.options.zoom);
 		
 		this.icon = $merge(new google.maps.Icon(), {
-			image: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56.png';
-			shadow: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56s.png';
-			iconSize: new google.maps.Size(32,32);
-			shadowSize: new google.maps.Size(59,32);
-			iconAnchor: new google.maps.Point(9, 34);
-			infoWindowAnchor: new google.maps.Point(9, 2);
-			infoShadowAnchor: new google.maps.Point(18, 25);
-			transparent: "http://www.google.com/intl/en_ALL/mapfiles/markerTransparent.png";
-			printImage: "coldmarkerie.gif";
-			mozPrintImage: "coldmarkerff.gif";
+			image: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56.png',
+			shadow: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56s.png',
+			iconSize: new google.maps.Size(32,32),
+			shadowSize: new google.maps.Size(59,32),
+			iconAnchor: new google.maps.Point(9, 34),
+			infoWindowAnchor: new google.maps.Point(9, 2),
+			infoShadowAnchor: new google.maps.Point(18, 25),
+			transparent: "http://www.google.com/intl/en_ALL/mapfiles/markerTransparent.png",
+			printImage: "coldmarkerie.gif",
+			mozPrintImage: "coldmarkerff.gif"
 		});
 		
 		window.addEvent('keydown', function(e){
 			var node = (evt.target) ? evt.target : ((evt.srcElement) ? evt.srcElement : null);
-			if (e.key == 'r' && (e.target.type == "text")) e.preventDefault(); //Investigate the necessity of the node type check here
+			if (e.key == 'r' && (e.target.type == "text")){ e.preventDefault();} //Investigate the necessity of the node type check here
 		});
 		
 		this.ajaxSearch();
@@ -112,7 +113,7 @@ var PropertyWidget = new Class({
 			whole = split[0],
 			rgx = /(\d+)(\d{3})/;
 		
-		while (rgx.test(whole)) whole = whole.replace(rgx, '$1' + ',' + '$2');
+		while (rgx.test(whole)){ whole = whole.replace(rgx, '$1' + ',' + '$2');}
 		
 		return whole + ((split[1]) ? '.' : '');
 	},
@@ -120,52 +121,42 @@ var PropertyWidget = new Class({
 	ajaxSearch: function(){
 		$('loading_div').style.display="block";
 		var noLimit     = this.options.noLimit;
-		var price_low  	= (noLimit) ? ((priceMin == this.options.priceLow) ? '' : priceMin) : priceMin,
-		price_high 		= (noLimit) ? ((priceMax == this.options.priceHigh) ? '' : priceMax) : priceMax,
-		sqft_low   		= sqftMin,
-		sqft_high  		= sqftMax,
-		beds_low   		= bedsMin,
-		beds_high  		= bedsMax,
-		baths_low  		= bathsMin,
-		baths_high 		= bathsMax,
+		var price_low   = (noLimit) ? ((priceMin == this.options.priceLow) ? '' : priceMin) : priceMin,
+		price_high      = (noLimit) ? ((priceMax == this.options.priceHigh) ? '' : priceMax) : priceMax,
+		sqft_low        = sqftMin,
+		sqft_high       = sqftMax,
+		beds_low        = bedsMin,
+		beds_high       = bedsMax,
+		baths_low       = bathsMin,
+		baths_high      = bathsMax,
 		ptype           = new Array();
-
+        
 		//set pagination variables
 		this.options.limit      = document.slider_search.limit.value;
 		this.options.limitstart = (document.slider_search.limitstart.value) ? document.slider_search.limitstart.value : 0;            
 
+		var search_string='';
 		if(document.slider_search.search_string.value != langText['inputText']){
-			var search_string = document.slider_search.search_string.value;
-		}else{
-			search_string = "";
+			search_string = document.slider_search.search_string.value;
 		}
 
 		//var city = escape(document.slider_search.city.value);
 		var city    = document.slider_search.city.value;
 		var stype   = document.slider_search.stype.value;
-
+		
+		var hoa_query='';
 		if(this.options.showHoa == 1){
-			var hoa 	   = document.slider_search.hoa.checked;
-			if (hoa) { hoa = 1 } else { hoa = 0 };
-			var hoa_query = '&hoa='+hoa;
-		}else{
-			hoa_query = '';
+			hoa_query = '&hoa='+(document.slider_search.hoa.checked?1:0);
 		}
-
+		
+		var reo_query='';
 		if(this.options.showReo == 1){
-			var reo 	   = document.slider_search.reo.checked;
-			if (reo) { reo = 1 } else { reo = 0 };
-			var reo_query = '&reo='+reo;
-		}else{
-			reo_query = '';
+			reo_query = '&reo='+(document.slider_search.reo.checked?1:0);
 		}
-
+		
+		var wf_query='';
 		if(this.options.showWf){
-			var waterfront = document.slider_search.waterfront.checked;
-			if (waterfront) { waterfront = 1 } else { waterfront = 0 };
-			var wf_query = '&waterfront='+waterfront;
-		}else{
-			wf_query = '';
+			wf_query = '&waterfront='+(document.slider_search.waterfront.checked?1:0);
 		}
 
 		//loop through available categories
@@ -233,7 +224,7 @@ var PropertyWidget = new Class({
 		return dual_slider;
 	},
 	
-	beds_slider function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
+	beds_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
 		this.options = options;
 		var range = this.options.sliderLength;
 		if ((startmax - startmin) < this.options.sliderLength) {
@@ -262,7 +253,7 @@ var PropertyWidget = new Class({
 		return dual_slider;
 	},
 	
-	baths_slider function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
+	baths_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
 		this.options = options;
 		var range = this.options.sliderLength;
 		if ((startmax - startmin) < this.options.sliderLength) {
@@ -341,8 +332,8 @@ var PropertyWidget = new Class({
 	// <OLD CODE>
 		var totalcount = input[0].totalcount;
 		$('advmap_counter').set('html', totalcount);
-		var prevLimit  = (parseInt(this.options.limitstart) - parseInt(this.options.limit));
-		var nextLimit  = (parseInt(this.options.limitstart) + parseInt(this.options.limit));
+		var prevLimit  = (parseInt(this.options.limitstart,10) - parseInt(this.options.limit,10));
+		var nextLimit  = (parseInt(this.options.limitstart,10) + parseInt(this.options.limit,10));
 
 		// JSACES: Haven't yet explored this section in the live page, but I am sure the following code can be reduced to a one liner for each limit 
 	
@@ -361,7 +352,7 @@ var PropertyWidget = new Class({
 
 	// <NEW CODE>
 		var pagingTemplate = '<tr><td class="ip_pagecount">{pagecount}</td><td class="ip_pagenav">{beginning}{end}</td></tr>',
-			pagingButton = '<input type="button" class="ipbutton" value="{value}" limit="{limit}" style="display: {display};" />'
+			pagingButton = '<input type="button" class="ipbutton" value="{value}" limit="{limit}" style="display: {display};" />';
 			pagingData = {
 				pagecount: langText.tprop + ': ' + this.options.limitstart + '-' + nextLimit + ' ' + langText.of + ' ' + totalcount,
 				beginning: pagingButton.substitute({
@@ -378,35 +369,35 @@ var PropertyWidget = new Class({
 		
 		var paginationTop = new Element('table', {
 			'class': 'ip_pagination',
-			'html': pagingTemplate.subsitute(pagingData)
+			'html': pagingTemplate.subsitute(pagingData),
 			'events': {
 				'click:relay(input.ipbutton)': function(){
 					var limit = e.target.get('limit');
-					if(limit) this.ajaxPage.pass(limit);
+					if(limit){ this.ajaxPage.pass(limit);}
 				}.bind(this)
 			}
 		});
 		
-		var propertyHeaders = []
-			$H({
-				'price': 'currency',
-				'pid': 'string',
-				'street': 'string',
-				'beds': 'number',
-				'baths': 'number',
-				'sqft': 'number',
-				'preview': 'noaxis',
-			}).each(function(v, k){
-				propertyHeaders.push({
-					content: langText[k],
-					properties: { axis: v }
-				});
+		var propertyHeaders = [];
+		$H({
+			'price': 'currency',
+			'pid': 'string',
+			'street': 'string',
+			'beds': 'number',
+			'baths': 'number',
+			'sqft': 'number',
+			'preview': 'noaxis'
+		}).each(function(v, k){
+			propertyHeaders.push({
+				content: langText[k],
+				properties: { axis: v }
 			});
-			
+		});
+		
 		var propertyRows = [];
 			if (totalcount > 0){
 				input.each(function(e){
-					var marker = this.createMarker(e);
+					var marker = this.createMarker(e),
 						url = input[i].proplink,
 						row = [
 							input[i].formattedprice,
@@ -419,14 +410,15 @@ var PropertyWidget = new Class({
 						];
 					propertyRows.push(row);	
 				}, this);
+			}else{
+				propertyRows.push([{
+					content: langText.noRecords,
+					properties: {
+						'colspan': 7,
+						'align': 'center'
+					}
+				}]);
 			}
-			else propertyRows.push([{
-				content: langText.noRecords,
-				properties: {
-					'colspan': 7,
-					'align': 'center'
-				}
-			}]);
 		
 		var propertyTable = new HtmlTable({
 			properties: {
@@ -438,7 +430,7 @@ var PropertyWidget = new Class({
 		
 		$(propertyTable).addEvents({
 			'mouseenter:relay(a[preview=mouseenter])': this.myclick,
-			'click:relay(a[preview=click])': this.myclick,
+			'click:relay(a[preview=click])': this.myclick
 		}).inject(this.listElement);
 		
 		var paginationBottom = paginationTop.clone();
@@ -448,14 +440,14 @@ var PropertyWidget = new Class({
 	// </OLD CODE>
 	},
 	
-	formatWindow function(input) {
+	formatWindow: function(input) {
 		var url = input.proplink;
 		var link_add =  input.street_address.clean()+', '+input.city.clean();
 		var html = '<div class="bubble">';
 		html += '<h4><a href="'+url+'">'+link_add+'</a></h4>';
 		html += '<p><b>'+langText['pid']+':</b> '+input.mls_id+'<br />';
 		html += '<b>'+langText['price']+':</b> '+input.formattedprice+'</p>';
-		if(input.thumb != null){
+		if(!input.thumb){
 			html += '<div class="bubble_image"><a href="'+url+'">'+input.thumb+'</a></div>';
 			html += '<div class="bubble_desc">';
 			if(input.short_description){
@@ -475,7 +467,7 @@ var PropertyWidget = new Class({
 		return html;
 	},
 	
-	createMarker function(input) {
+	createMarker: function(input) {
 		if(input.lat_pos && input.long_pos){
 			var coord = new google.maps.LatLng(input.lat_pos,input.long_pos);
 			var marker = new google.maps.Marker(coord,houseIcon);
@@ -500,7 +492,7 @@ var PropertyWidget = new Class({
 		gmarkers[i].openInfoWindowHtml(htmls[i]);
 	},
 	
-	readMap function(data) {
+	readMap: function(data) {
 		bounds = new google.maps.LatLngBounds();
 		// hide the info window, otherwise it still stays open where the removed marker used to be
 		map.getInfoWindow().hide();
