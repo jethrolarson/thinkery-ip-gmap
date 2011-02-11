@@ -52,13 +52,7 @@ var PropertyWidget = new Class({
 	},
 	
 	googleCallback: function(){
-		this.mapElement = new Element('div', {
-			id: 'property_map'
-		}).inject(this.element);
-		
-		this.listElement = new Element('div', {
-			id: 'property_list'
-		}).inject(this.element);
+		[this.mapElement, this.mapInstance] = $$( new Element('div', {id: 'property_map'}), new Element('div', {id: 'property_list'})).inject(this.element);
 		
 		this.mapInstance = new google.maps.Map2(this.mapElement);
 		this.mapInstance.setUIToDefault();
