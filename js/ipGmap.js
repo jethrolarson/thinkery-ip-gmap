@@ -34,7 +34,17 @@ var PropertyWidget = new Class({
 	
 	initialize: function(element, options){
 		this.setOptions(options);
+		
 		this.element = $(element);
+		this.markers = {};
+		this.request = new Request({
+			method: 'get',
+			url: this.options.ipbaseurl + 'index.php',
+			onComplete: function(response){
+				$('loading_div').hide();
+				this.readMap(response);
+			}.bind(this)
+		});
 		
 		if(!google.maps){
 		/*
@@ -123,7 +133,7 @@ var PropertyWidget = new Class({
 		beds_high       = bedsMax,
 		baths_low       = bathsMin,
 		baths_high      = bathsMax,
-		ptype           = new Array();
+		ptype           = [];
         
 		//set pagination variables
 		this.options.limit      = document.slider_search.limit.value;
@@ -166,16 +176,9 @@ var PropertyWidget = new Class({
 		//alert(checked);
 
 
-		var myurl = this.options.ipbaseurl+"index.php?option=com_iproperty&view=advsearch&task=ajaxSearch&ptype="+checked+"&price_high="+price_high+"&price_low="+price_low+"&sqft_high="+sqft_high+"&sqft_low="+sqft_low+"&beds_high="+beds_high+"&beds_low="+beds_low+"&baths_high="+baths_high+"&baths_low="+baths_low+"&search="+search_string+"&city="+city+"&stype="+stype+wf_query+hoa_query+reo_query+"&limit="+this.options.limit+"&limitstart="+this.options.limitstart+"&format=raw";
-		//alert(myurl);
-		var a = new Ajax(myurl,{
-			method: 'get',
-			onComplete: function( response ){
-				$('loading_div').style.display="none";
-				readMap( response );
-			}
-		});
-		a.request();
+		this.request.send(
+			'option=com_iproperty&view=advsearch&task=ajaxSearch&ptype=' + checked + '&price_high=' + price_high + '&price_low=' + price_low + '&sqft_high=' + sqft_high + '&sqft_low=' + sqft_low + '&beds_high=' + beds_high + '&beds_low=' + beds_low + '&baths_high=' + baths_high + '&baths_low=' + baths_low + '&search=' + search_string + '&city=' +city + '&stype=' + stype + wf_query + hoa_query + reo_query + '&limit=' + this.options.limit + '&limitstart=' + this.options.limitstart + '&format=raw'
+		);
 	},
 	
 	sqft_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
@@ -323,28 +326,15 @@ var PropertyWidget = new Class({
 	},
 	
 	listProperties: function(input) {
-	// <OLD CODE>
-		var totalcount = input[0].totalcount;
-		$('advmap_counter').set('html', totalcount);
-		var prevLimit  = (parseInt(this.options.limitstart,10) - parseInt(this.options.limit,10));
-		var nextLimit  = (parseInt(this.options.limitstart,10) + parseInt(this.options.limit,10));
-
-		// JSACES: Haven't yet explored this section in the live page, but I am sure the following code can be reduced to a one liner for each limit 
-	
-			//if next limit is larger than total, hide next button and set maxcount to total
-			if(nextLimit >= totalcount){
-				var end = true;
-				nextLimit = totalcount;
-			}
-
-			//if previous limit is less than 0, hide previous button and set min limit to 0
-			if(prevLimit < 0){
-				var beginning = true;
-				prevLimit = 0;
-			}
-	// </OLD CODE>
-
 	// <NEW CODE>
+		var totalcount = input[0].totalcount,
+			prevLimit = this.options.limitstart.toInt() - this.options.limit.toInt(),
+			prevLimit = (prevLimit < 0) ? 0 : prevLimit, //if previous limit is less than 0, hide previous button and set min limit to 0
+			nextLimit = this.options.limitstart.toInt() + this.options.limit.toInt(),
+			nextLimit = (nextLimit >= totalcount) ? totalcount : nextLimit; //if next limit is larger than total, hide next button and set maxcount to total
+		
+		$('advmap_counter').set('html', totalcount);
+	
 		var pagingTemplate = '<tr><td class="ip_pagecount">{pagecount}</td><td class="ip_pagenav">{beginning}{end}</td></tr>',
 			pagingButton = '<input type="button" class="ipbutton" value="{value}" limit="{limit}" style="display: {display};" />';
 			pagingData = {
@@ -352,12 +342,12 @@ var PropertyWidget = new Class({
 				beginning: pagingButton.substitute({
 					value: langText.previous,
 					limit: previousLimit,
-					display: (beginning) ? 'none' : 'inline'
+					display: (!prevLimit) ? 'none' : 'inline'
 				}),
 				end: pagingButton.substitute({
 					value: langText.next,
 					limit: nextLimit,
-					display: (end) ? 'none' : 'inline'
+					display: (nextLimit == totalcount) ? 'none' : 'inline'
 				})
 			};
 		
@@ -423,15 +413,15 @@ var PropertyWidget = new Class({
 		});
 		
 		$(propertyTable).addEvents({
-			'mouseenter:relay(a[preview=mouseenter])': this.myclick,
-			'click:relay(a[preview=click])': this.myclick
+			'mouseenter:relay(a[preview=mouseenter])': this.openInfoWindow,
+			'click:relay(a[preview=click])': this.openInfoWindow
 		}).inject(this.listElement);
 		
 		var paginationBottom = paginationTop.clone();
-	// </NEW CODE>
-	// </OLD CODE>	
-		new sortableTable('prop_table', {overCls: 'over', sortBy: 'DESC'});
-	// </OLD CODE>
+		
+		new sortableTable('prop_table', {overCls: 'over', sortBy: 'DESC'}); // FIXME: this is the old sortable table script, get this working with HtmlTable from More
+		
+		return this;
 	},
 	
 	getMarkerHtml: function(marker) {
@@ -451,52 +441,43 @@ var PropertyWidget = new Class({
 	createMarker: function(input) {
 		if(input.lat_pos && input.long_pos){
 			var coord = new google.maps.LatLng(input.lat_pos,input.long_pos),
-			    marker = new google.maps.Marker(coord,houseIcon),//fixme, houseIcon global?
-			    markerHtml = getMarkerHtml(input);
+			    marker = new google.maps.Marker(coord, this.icon), //this.icon is replacing houseIcon the global, defined in the callback
+			    html = this.getMarkerHtml(input);
+				
 			this.bounds.extend(coord);
+			
 			google.maps.Event.addListener(marker, "click", function() {
-				this.openInfoWindowHtml(markerHtml);
+				this.openInfoWindowHtml(html);
 			});
 
 			//create map marker based on property id
-			this.gmarkers[input.id] = marker;
-			this.htmls[input.id] = markerHtml;
+			this.markers[input.id] = [marker, html];
 			map.addOverlay(marker);
+			
 			return marker;
-		}else{
-			//no lat & long, return no marker
-			return false;
 		}
+		else return false;
 	},
 	
-	myclick: function(i) {
-		this.gmarkers[i].openInfoWindowHtml(this.htmls[i]);
+	openInfoWindow: function(e) {
+		var item = this.markers[e.target.id];
+		item[0].openInfoWindowHtml(item[1]);
 	},
 	
 	readMap: function(data) {
+		data = JSON.decode(data);
 		this.bounds = new google.maps.LatLngBounds();
-		// hide the info window, otherwise it still stays open where the removed marker used to be
-		this.mapInstance.getInfoWindow().hide();
+		this.mapInstance.getInfoWindow().hide(); // hide the info window, otherwise it still stays open where the removed marker used to be
 		this.mapInstance.clearOverlays();
+		this.markers = {};
+		
+		$('advmap_nofound')[(data.length <= 0) ? 'show' : 'hide']; //TODO: if no maps found, display advmap_nofound div with no search criteria met
 
-		// empty the arrays
-		this.gmarkers = [];
-		this.htmls = [];
-
-		//json evaluate returned data
-		jsonData = Json.evaluate(data);
-
-		//TODO: if no maps found, display advmap_nofound div with no search criteria met
-		if (jsonData.length <= 0) {
-			document.getElementById('advmap_nofound').style.display = 'block';
-		}else{
-			document.getElementById('advmap_nofound').style.display = 'none';
-		}
-
-		//create sortable table list
-		listProperties(jsonData);
+		this.listProperties(data); //create sortable table list
 		this.mapInstance.setZoom(this.mapInstance.getBoundsZoomLevel(this.bounds));
 		this.mapInstance.setCenter(this.bounds.getCenter());
+		
+		return this;
 	}
 	
 });
@@ -509,6 +490,10 @@ langText is a global object. Though it's wrongly declaired as an Array. It just 
 
 We should probably break this thing into two parts:
 1. The part that modifies and sends the ajax search
+	- this part should be a Request instance declared in the initilization fn
+	  that is attached to the Class reference, we can distribute any of that Request
+	  instance's methods to the Class that we want, send for instance, could map to a
+	  wrapped version that the Class augments.
 2. The part that updates the google map and places the markers.
 
 */
