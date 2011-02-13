@@ -11,19 +11,10 @@ var PropertyWidget = new Class({
 		showReo: false,
 		showWf: false,
 		sliderLength: 300,
-		priceHigh: 100000,
-		priceLow: 50000,
-		sqftHigh: 8000,
-		sqftLow: 1000,
-		bedsHigh: 5,
-		bedsLow: 1,
-		bathsHigh: 5,
-		bathsLow: 1,
+		
 		itemId: 99999,
 		showPreview: 1,
-		currencySymbol: '',
-		currencyPos: '',
-		currencyFormat: '',
+		
 		noLimit: 0,
 		mapOptions: {
 			zoom: 13,
@@ -31,67 +22,62 @@ var PropertyWidget = new Class({
 			//center 
 			lat: '47.6725282',
 			lng: '-116.7679661'
+		},
+		searchOptions: {
+			price_high: 100000,
+			price_low: 50000,
+			sqft_high: 8000,
+			sqft_Low: 1000,
+			beds_high: 5,
+			beds_low: 1,
+			baths_high: 5,
+			baths_low: 1,
+			city: '',
+			stype: '',
+			limit: '',
+			limitstart: '',
+			search: '',
+			option:'com_iproperty',
+			view: 'advsearch',
+			task:'ajaxSearch',
+			ptype: '',
+			hoa: '',
+			format: 'raw'
 		}
 		// New options:
 	},
-	
+	//Search Query
+	query: {},
 	initialize: function(element, options){
 		this.setOptions(options);
 		
 		this.element = $(element);
 		this.markers = {};
+		
 		this.request = new Request({
 			method: 'get',
 			url: this.options.ipbaseurl + 'index.php',
-			onComplete: function(response){
-				$('loading_div').hide();
-				this.readMap(response);
-			}.bind(this)
+			onComplete: eSearchLoad.bind(this)
+			//Shouldn't we have handlers for errors?
 		});
-		
-		if(!google.maps){
-		/*
-			Instantiate Google Maps within this Class initialization if google's script is not required earlier in 
-			the page, all the methods of this Class will assume the following conditions are met:
-				--- All intitial Element creation and setup methods of this class should be 
-					kicked off in the google maps callback
-				--- Attach the google maps object to the 'this' reference of the Class's object, use "gmap" as the property key
-		 */
-		}else{
-			this.googleCallback();
-		}
-		
+		//create DOM
+		this.loadingDiv = new Element('div',{id:'loading_div',text: 'Loading...'});
+		this.mapElement = new Element('div', {id: 'property_map', text: 'Loading Map...'});
+		this.propertyList = new Element('div', {id: 'property_list'});
+		$$(this.loadingDiv,this.mapElement,this.propertyList).inject(this.element);
+		this.createMap();
+		//this.search();
 		// Slider creation needed here
 	},
-	
-	googleCallback: function(){
+	eSearchLoad: function(data){
+		this.results = data;
+		this.loading_div.hide();
+		this.updateTable();
+		this.updateMap();
+	},
+	createMap: function(){
 		this.options.mapOptions.center = new google.maps.LatLng(this.options.mapOptions.lat, this.options.mapOptions.lng);
-		
-		this.mapElement = new Element('div', {id: 'property_map'}).inject(this.element);
-		
-		this.propertyList = new Element('div', {id: 'property_list'}).inject(this.element);
-		
 		this.mapInstance = new google.maps.Map(this.mapElement, this.options.mapOptions);
-		
-		// this.icon = $merge(new google.maps.Icon(), {
-		// 			image: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56.png',
-		// 			shadow: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56s.png',
-		// 			iconSize: new google.maps.Size(32,32),
-		// 			shadowSize: new google.maps.Size(59,32),
-		// 			iconAnchor: new google.maps.Point(9, 34),
-		// 			infoWindowAnchor: new google.maps.Point(9, 2),
-		// 			infoShadowAnchor: new google.maps.Point(18, 25),
-		// 			transparent: "http://www.google.com/intl/en_ALL/mapfiles/markerTransparent.png",
-		// 			printImage: "coldmarkerie.gif",
-		// 			mozPrintImage: "coldmarkerff.gif"
-		// 		});
-		
-		// window.addEvent('keydown', function(e){
-		// 			var node = (evt.target) ? evt.target : ((evt.srcElement) ? evt.srcElement : null);
-		// 			if (e.key == 'r' && (e.target.type == "text")){ e.preventDefault();} //Investigate the necessity of the node type check here
-		// 		});
-		
-		//this.ajaxSearch();
 	},
 	
 	formatCurrency: function(num) {
@@ -126,63 +112,33 @@ var PropertyWidget = new Class({
 		return whole + ((split[1]) ? '.' : '');
 	},
 	
-	ajaxSearch: function(){
-		//$('loading_div').style.display="block";
-		var noLimit     = this.options.noLimit,
-		price_low   = (noLimit) ? ((this.priceMin == this.options.priceLow) ? '' : this.priceMin) : this.priceMin,
-		price_high      = (noLimit) ? ((this.priceMax == this.options.priceHigh) ? '' : this.priceMax) : this.priceMax,
-		sqft_low        = this.sqftMin,
-		sqft_high       = this.sqftMax,
-		beds_low        = this.bedsMin,
-		beds_high       = this.bedsMax,
-		baths_low       = this.bathsMin,
-		baths_high      = this.bathsMax,
-		ptype           = [];
-        
-		//set pagination variables
-		// this.options.limit      = document.slider_search.limit.value;
-		// 		this.options.limitstart = (document.slider_search.limitstart.value) ? document.slider_search.limitstart.value : 0;            
-
-		var search_string='';
-		if(document.slider_search.search_string.value != langText['inputText']){
-			search_string = document.slider_search.search_string.value;
-		}
-
-		//var city = escape(document.slider_search.city.value);
-		var city    = document.slider_search.city.value;
-		var stype   = document.slider_search.stype.value;
-		
-		var hoa_query='';
-		if(this.options.showHoa == 1){
-			hoa_query = '&hoa='+(document.slider_search.hoa.checked?1:0);
-		}
-		
-		var reo_query='';
-		if(this.options.showReo == 1){
-			reo_query = '&reo='+(document.slider_search.reo.checked?1:0);
-		}
-		
-		var wf_query='';
-		if(this.options.showWf){
-			wf_query = '&waterfront='+(document.slider_search.waterfront.checked?1:0);
-		}
-
-		//loop through available categories
+	search: function(){
+		var categories = [], i,
 		ptype = document.getElementsByName("ptype[]");
-		var checked = "";
+		this.loadingDiv.show();
+
+		//get the value of the form elements associated with the search options
+		this.query = Object.merge(this.options.searchOptions,{
+			//search: this.searchInput.value,
+			//limit: document.slider_search.limit.value,
+			//limitstart: document.slider_search.limitstart.value  || 0,
+			//city: this.cityInput.value,
+			//stype: this.stypeInput.value,
+			//hoa: this.options.showHoa ? this.hoaInput.checked ? 1:0 :'',
+			//reo: this.options.showReo ?this.reoInput.checked ? 1:0 : '',
+			//waterfront: this.options.showWf ?this.waterfrontInput.checked ? 1:0 : '',
+		});
+		
+		//loop through available categories
 		for(i=0;i<ptype.length;i++){
 			if(ptype[i].checked){
-				checked+=ptype[i].value+",";
+				categories.push(ptype[i].value);
 			}
 		}
-		var strLen = checked.length;
-		checked = checked.slice(0,strLen-1);
-		//alert(checked);
+		this.query.ptype = categories.join(',');
 
 
-		this.request.send(
-			'option=com_iproperty&view=advsearch&task=ajaxSearch&ptype=' + checked + '&price_high=' + price_high + '&price_low=' + price_low + '&sqft_high=' + sqft_high + '&sqft_low=' + sqft_low + '&beds_high=' + beds_high + '&beds_low=' + beds_low + '&baths_high=' + baths_high + '&baths_low=' + baths_low + '&search=' + search_string + '&city=' +city + '&stype=' + stype + wf_query + hoa_query + reo_query + '&limit=' + this.options.limit + '&limitstart=' + this.options.limitstart + '&format=raw'
-		);
+		this.request.send(this.query);
 	},
 	
 	sqft_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
@@ -475,10 +431,10 @@ var PropertyWidget = new Class({
 		this.mapInstance.clearOverlays();
 		this.markers = {};
 		
-		$('advmap_nofound')[(data.length <= 0) ? 'show' : 'hide']; //TODO: if no maps found, display advmap_nofound div with no search criteria met
+		$('advmap_nofound')[(data.length <= 0) ? 'show' : 'hide'](); //TODO: if no maps found, display advmap_nofound div with no search criteria met
 
 		this.listProperties(data); //create sortable table list
-		this.mapInstance.setZoom(this.mapInstance.getBoundsZoomLevel(this.bounds));
+//		this.mapInstance.setZoom(this.mapInstance.getBoundsZoomLevel(this.bounds));
 		this.mapInstance.setCenter(this.bounds.getCenter());
 		
 		return this;

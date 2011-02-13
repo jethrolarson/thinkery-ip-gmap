@@ -11,8 +11,27 @@
 </head>
 <body>
 	<h1>Property widget test</h1>
-	<div id="mapCanvas">Canvas</div>
+	<div id="mapCanvas"></div>
 	<script>
+		//Localization mapping
+		var langText = {
+			tprop:'Results',
+			price:'Price',
+			nolimit: 'No Limit',
+			pid: 'Property ID',
+			street: 'Street',
+			beds: 'Beds',
+			baths: 'Baths',
+			sqft: 'Ft<sup>2</sup>',
+			preview: 'Preview',
+			more: 'More',
+			inputText: 'ID or Keyword',
+			noRecords: 'Sorry, no records were found. Please try again.',
+			previous: 'Previous',
+			next: 'Next',
+			of: 'of'
+		};
+		
 		window.addEvent('domready',function(){
 			var pw = new PropertyWidget($('mapCanvas'),{});
 		});
