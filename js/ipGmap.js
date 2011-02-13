@@ -54,7 +54,7 @@ var PropertyWidget = new Class({
 		this.element = $(element);
 		this.markers = {};
 		
-		this.request = new Request({
+		this.request = new Request.JSON({
 			method: 'get',
 			url: this.options.ipbaseurl + 'index.php',
 			onComplete: this.eSearchLoad.bind(this)
@@ -66,16 +66,17 @@ var PropertyWidget = new Class({
 		this.propertyList = new Element('div', {id: 'property_list'});
 		$$(this.loadingDiv,this.mapElement,this.propertyList).inject(this.element);
 		this.createMap();
-		//this.search();
+		this.search();
 		// Slider creation needed here
 	},
 	eSearchLoad: function(data){
 		this.results = data;
-		this.loading_div.hide();
+		this.loadingDiv.style.display = 'none';
 		this.updateTable();
 		this.updateMap();
 	},
 	createMap: function(){
+		//Do we want to try to get GEO?
 		this.options.mapOptions.center = new google.maps.LatLng(this.options.mapOptions.lat, this.options.mapOptions.lng);
 		this.mapInstance = new google.maps.Map(this.mapElement, this.options.mapOptions);
 	},
@@ -114,11 +115,11 @@ var PropertyWidget = new Class({
 	
 	search: function(){
 		var categories = [], i,
-		ptype = document.getElementsByName("ptype[]");
-		this.loadingDiv.show();
+		ptype = document.getElementsByName("ptype[]"),len;
+		this.loadingDiv.style.display='block';
 
 		//get the value of the form elements associated with the search options
-		this.query = Object.merge(this.options.searchOptions,{
+		this.query = $merge(this.options.searchOptions,{
 			//search: this.searchInput.value,
 			//limit: document.slider_search.limit.value,
 			//limitstart: document.slider_search.limitstart.value  || 0,
@@ -129,16 +130,17 @@ var PropertyWidget = new Class({
 			//waterfront: this.options.showWf ?this.waterfrontInput.checked ? 1:0 : '',
 		});
 		
-		//loop through available categories
-		for(i=0;i<ptype.length;i++){
-			if(ptype[i].checked){
-				categories.push(ptype[i].value);
+		if(ptype){
+			//loop through available categories
+			for(i=0,len=ptype.length;i<len;i++){
+				if(ptype[i].checked){
+					categories.push(ptype[i].value);
+				}
 			}
+			this.query.ptype = categories.join(',');
 		}
-		this.query.ptype = categories.join(',');
 
-
-		this.request.send(this.query);
+		this.request.send({data: this.query});
 	},
 	
 	sqft_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
@@ -423,7 +425,12 @@ var PropertyWidget = new Class({
 		var item = this.markers[e.target.id];
 		item[0].openInfoWindowHtml(item[1]);
 	},
-	
+	updateMap: function(){
+		
+	},
+	updateTable: function(){
+		
+	},
 	readMap: function(data) {
 		data = JSON.decode(data);
 		this.bounds = new google.maps.LatLngBounds();
