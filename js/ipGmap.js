@@ -57,7 +57,7 @@ var PropertyWidget = new Class({
 		this.request = new Request({
 			method: 'get',
 			url: this.options.ipbaseurl + 'index.php',
-			onComplete: eSearchLoad.bind(this)
+			onComplete: this.eSearchLoad.bind(this)
 			//Shouldn't we have handlers for errors?
 		});
 		//create DOM
