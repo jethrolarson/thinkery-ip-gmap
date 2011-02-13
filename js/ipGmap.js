@@ -20,15 +20,18 @@ var PropertyWidget = new Class({
 		bathsHigh: 5,
 		bathsLow: 1,
 		itemId: 99999,
-		//latitude: '',
-		//longitude: '',
-		zoom: 13,
-		maptype: G_PHYSICAL_MAP,
 		showPreview: 1,
 		currencySymbol: '',
 		currencyPos: '',
 		currencyFormat: '',
-		noLimit: 0
+		noLimit: 0,
+		mapOptions: {
+			zoom: 13,
+			mapTypeId: google.maps.MapTypeId.ROADMAP,
+			//center 
+			lat: '47.6725282',
+			lng: '-116.7679661'
+		}
 		// New options:
 	},
 	
@@ -62,32 +65,33 @@ var PropertyWidget = new Class({
 	},
 	
 	googleCallback: function(){
-		[this.mapElement, this.mapInstance] = $$( new Element('div', {id: 'property_map'}), new Element('div', {id: 'property_list'})).inject(this.element);
+		this.options.mapOptions.center = new google.maps.LatLng(this.options.mapOptions.lat, this.options.mapOptions.lng);
 		
-		this.mapInstance = new google.maps.Map2(this.mapElement);
-		this.mapInstance.setUIToDefault();
-		this.mapInstance.setMapType(this.options.maptype);        
-		this.mapInstance.setCenter(new google.maps.LatLng(this.options.latitude, this.options.longitude), (this.options.latitude && this.options.longitude) ? 13 : this.options.zoom);
+		this.mapElement = new Element('div', {id: 'property_map'}).inject(this.element);
 		
-		this.icon = $merge(new google.maps.Icon(), {
-			image: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56.png',
-			shadow: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56s.png',
-			iconSize: new google.maps.Size(32,32),
-			shadowSize: new google.maps.Size(59,32),
-			iconAnchor: new google.maps.Point(9, 34),
-			infoWindowAnchor: new google.maps.Point(9, 2),
-			infoShadowAnchor: new google.maps.Point(18, 25),
-			transparent: "http://www.google.com/intl/en_ALL/mapfiles/markerTransparent.png",
-			printImage: "coldmarkerie.gif",
-			mozPrintImage: "coldmarkerff.gif"
-		});
+		this.propertyList = new Element('div', {id: 'property_list'}).inject(this.element);
 		
-		window.addEvent('keydown', function(e){
-			var node = (evt.target) ? evt.target : ((evt.srcElement) ? evt.srcElement : null);
-			if (e.key == 'r' && (e.target.type == "text")){ e.preventDefault();} //Investigate the necessity of the node type check here
-		});
+		this.mapInstance = new google.maps.Map(this.mapElement, this.options.mapOptions);
 		
-		this.ajaxSearch();
+		// this.icon = $merge(new google.maps.Icon(), {
+		// 			image: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56.png',
+		// 			shadow: this.options.ipbaseurl + '/components/com_iproperty/assets/images/map/icon56s.png',
+		// 			iconSize: new google.maps.Size(32,32),
+		// 			shadowSize: new google.maps.Size(59,32),
+		// 			iconAnchor: new google.maps.Point(9, 34),
+		// 			infoWindowAnchor: new google.maps.Point(9, 2),
+		// 			infoShadowAnchor: new google.maps.Point(18, 25),
+		// 			transparent: "http://www.google.com/intl/en_ALL/mapfiles/markerTransparent.png",
+		// 			printImage: "coldmarkerie.gif",
+		// 			mozPrintImage: "coldmarkerff.gif"
+		// 		});
+		
+		// window.addEvent('keydown', function(e){
+		// 			var node = (evt.target) ? evt.target : ((evt.srcElement) ? evt.srcElement : null);
+		// 			if (e.key == 'r' && (e.target.type == "text")){ e.preventDefault();} //Investigate the necessity of the node type check here
+		// 		});
+		
+		//this.ajaxSearch();
 	},
 	
 	formatCurrency: function(num) {
@@ -123,21 +127,21 @@ var PropertyWidget = new Class({
 	},
 	
 	ajaxSearch: function(){
-		$('loading_div').style.display="block";
-		var noLimit     = this.options.noLimit;
-		var price_low   = (noLimit) ? ((priceMin == this.options.priceLow) ? '' : priceMin) : priceMin,
-		price_high      = (noLimit) ? ((priceMax == this.options.priceHigh) ? '' : priceMax) : priceMax,
-		sqft_low        = sqftMin,
-		sqft_high       = sqftMax,
-		beds_low        = bedsMin,
-		beds_high       = bedsMax,
-		baths_low       = bathsMin,
-		baths_high      = bathsMax,
+		//$('loading_div').style.display="block";
+		var noLimit     = this.options.noLimit,
+		price_low   = (noLimit) ? ((this.priceMin == this.options.priceLow) ? '' : this.priceMin) : this.priceMin,
+		price_high      = (noLimit) ? ((this.priceMax == this.options.priceHigh) ? '' : this.priceMax) : this.priceMax,
+		sqft_low        = this.sqftMin,
+		sqft_high       = this.sqftMax,
+		beds_low        = this.bedsMin,
+		beds_high       = this.bedsMax,
+		baths_low       = this.bathsMin,
+		baths_high      = this.bathsMax,
 		ptype           = [];
         
 		//set pagination variables
-		this.options.limit      = document.slider_search.limit.value;
-		this.options.limitstart = (document.slider_search.limitstart.value) ? document.slider_search.limitstart.value : 0;            
+		// this.options.limit      = document.slider_search.limit.value;
+		// 		this.options.limitstart = (document.slider_search.limitstart.value) ? document.slider_search.limitstart.value : 0;            
 
 		var search_string='';
 		if(document.slider_search.search_string.value != langText['inputText']){
