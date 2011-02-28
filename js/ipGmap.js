@@ -43,6 +43,14 @@ var PropertyWidget = new Class({
 			ptype: '',
 			hoa: '',
 			format: 'raw'
+		},
+		templates:{
+			slider: '<div class="property_slider">' +
+						'<div class="slider_labels">' +
+							'<span class="slider_label_min">No Limit</span>{title}<span class="slider_label_max">No Limit</span>' +
+						'</div>' +
+						'<div class="slider_element"></div>' +
+					'</div>'
 		}
 		// New options:
 	},
@@ -53,6 +61,7 @@ var PropertyWidget = new Class({
 		
 		this.element = $(element);
 		this.markers = {};
+		this.sliders = [];
 		
 		this.request = new Request.JSON({
 			method: 'get',
@@ -61,17 +70,18 @@ var PropertyWidget = new Class({
 			//Shouldn't we have handlers for errors?
 		});
 		//create DOM
-		this.loadingDiv = new Element('div',{id:'loading_div',text: 'Loading...'});
+		this.loadingElement = new Element('div',{id:'loading_div',text: 'Loading...'});
 		this.mapElement = new Element('div', {id: 'property_map', text: 'Loading Map...'});
+		this.slidersElement = new Element('div', {id: 'property_sliders'});
 		this.propertyList = new Element('div', {id: 'property_list'});
-		$$(this.loadingDiv,this.mapElement,this.propertyList).inject(this.element);
+		$$(this.loadingElement,this.mapElement,this.propertyList).inject(this.element);
 		this.createMap();
 		this.search();
 		// Slider creation needed here
 	},
 	eSearchLoad: function(data){
 		this.results = data;
-		this.loadingDiv.style.display = 'none';
+		this.loadingElement.hide();
 		this.updateTable();
 		this.updateMap();
 	},
@@ -114,7 +124,7 @@ var PropertyWidget = new Class({
 	},
 	
 	search: function(){
-		this.loadingDiv.setStyle('display', 'block');
+		this.loadingElement.show();
 		this.query = $merge(this.options.searchOptions,{ //get the value of the form elements associated with the search options
 			//search: this.searchInput.value,
 			//limit: document.slider_search.limit.value,
@@ -134,44 +144,43 @@ var PropertyWidget = new Class({
 		this.request.send({data: this.query});
 	},
 	
-	sqft_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
-		this.options = options;
-		var range = this.options.sliderLength;
-		if ((startmax - startmin) < this.options.sliderLength) {
-			var tickSize = (this.options.sliderLength / (startmax - startmin));
-		}else{
-			tickSize = 1;
-		}
-		var initVals = [ 0,this.options.sliderLength ], // Values assigned during instantiation
-		//Event = YAHOO.util.Event,
-		Dom = YAHOO.util.Dom,
-		dual_slider,
-		scaleFactor = ((startmax - startmin) / this.options.sliderLength); // Custom scale factor for converting the pixel offset into a real value
-		dual_slider = YAHOO.widget.Slider.getHorizDualSlider(
-		bg,minthumb,maxthumb,
-		range, tickSize, initVals);
-
-		/*
-		 *TODO: recall set values
-		 *use this method to recall saved searches
-		 *and previous searches when implemented
-		 *where 8000 would be the recalled min value
-		 *
-		 *dual_slider.setMinValue(Math.round((8000-startmin) / scaleFactor));
-		 *
-		 */
+	sqft_slider: function(bg, startThumb, endThumb, minValue, maxValue, initialMin, initialMax, aSliderName, options) {
 		
-		dual_slider.subscribe("change", function(instance) {
-			var a_minvalue = Dom.get(minvalue);
-			var a_maxvalue = Dom.get(maxvalue);
-			a_minvalue.innerHTML =  addCommas(Math.round((dual_slider.minVal * scaleFactor) + startmin));
-			a_maxvalue.innerHTML =  addCommas(Math.round((dual_slider.maxVal * scaleFactor) + startmin));
-			sqftMin = (dual_slider.minVal * scaleFactor) + startmin;
-			sqftMax = (dual_slider.maxVal * scaleFactor) + startmin;
-		});
-
-		dual_slider.subscribe("slideEnd", function(){ limitReset();ajaxSearch(); });
-		return dual_slider;
+		var elements = Elements.from(this.options.templates.slider.substitute({title: aSliderName}))[0].inject(this.slidersElement),
+			slider = new Slider.Extra(elements.getElement('slider_element'));
+			minLabel = elements.getElement('slider_label_min'),
+			maxLabel = elements.getElement('slider_label_max'),
+			range = slider.addRange(new Element('div', {'class': 'slider_knob_start'}), new Element('div', {'class': 'slider_knob_end'}), {
+				steps: maxValue - minValue,
+				start: {
+					initialStep: initialMin - minValue,
+					onChange: function(step){
+						minLabel.set('text', '$' + (minValue + step * this.stepSize));
+					},
+				},
+				end: {
+					initialStep: maxValue - initialMax,
+					onChange: function(step){
+						maxLabel.set('text', '$' + (minValue + step * this.stepSize));
+					}
+				},
+				onComplete: function(){
+					this.search();
+				}.bind(this);
+			});
+			
+		this.sliders.push(slider);
+		
+		// This comment from The Thinkery
+			/*
+			 *TODO: recall set values
+			 *use this method to recall saved searches
+			 *and previous searches when implemented
+			 *where 8000 would be the recalled min value
+			 *
+			 *dual_slider.setMinValue(Math.round((8000-startmin) / scaleFactor));
+			 *
+			 */
 	},
 	
 	beds_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
@@ -439,6 +448,7 @@ var PropertyWidget = new Class({
 	}
 	
 });
+
 //IpAjaxSearch.implement(new Events);
 //IpAjaxSearch.implement(new Options);
 
