@@ -114,12 +114,8 @@ var PropertyWidget = new Class({
 	},
 	
 	search: function(){
-		var categories = [], i,
-		ptype = document.getElementsByName("ptype[]"),len;
-		this.loadingDiv.style.display='block';
-
-		//get the value of the form elements associated with the search options
-		this.query = $merge(this.options.searchOptions,{
+		this.loadingDiv.setStyle('display', 'block');
+		this.query = $merge(this.options.searchOptions,{ //get the value of the form elements associated with the search options
 			//search: this.searchInput.value,
 			//limit: document.slider_search.limit.value,
 			//limitstart: document.slider_search.limitstart.value  || 0,
@@ -130,15 +126,10 @@ var PropertyWidget = new Class({
 			//waterfront: this.options.showWf ?this.waterfrontInput.checked ? 1:0 : '',
 		});
 		
-		if(ptype){
-			//loop through available categories
-			for(i=0,len=ptype.length;i<len;i++){
-				if(ptype[i].checked){
-					categories.push(ptype[i].value);
-				}
-			}
-			this.query.ptype = categories.join(',');
-		}
+		var ptype = $$("[name=ptype[]]");
+		if(ptype) this.query.ptype = ptype.map(function(e){
+						if(e.checked) return e.value;
+					}).join(',');
 
 		this.request.send({data: this.query});
 	},
