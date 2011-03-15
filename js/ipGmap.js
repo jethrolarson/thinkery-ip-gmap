@@ -1,7 +1,7 @@
 
 var PropertyWidget = new Class({
 	
-	Implements: [Chain, Events, Options],
+	Implements: [Events, Chain, Options],
 	
 	Binds: ['googleCallback'],
 	
@@ -54,14 +54,14 @@ var PropertyWidget = new Class({
 		}
 		// New options:
 	},
-	//Search Query
-	query: {},
+	
 	initialize: function(element, options){
 		this.setOptions(options);
 		
 		this.element = $(element);
 		this.markers = {};
 		this.sliders = [];
+		this.query = {};
 		
 		this.request = new Request.JSON({
 			method: 'get',
@@ -74,7 +74,7 @@ var PropertyWidget = new Class({
 		this.mapElement = new Element('div', {id: 'property_map', text: 'Loading Map...'});
 		this.slidersElement = new Element('div', {id: 'property_sliders'});
 		this.propertyList = new Element('div', {id: 'property_list'});
-		$$(this.loadingElement,this.mapElement,this.propertyList).inject(this.element);
+		$$(this.loadingElement, this.mapElement, this.propertyList).inject(this.element);
 		this.createMap();
 		this.search();
 		// Slider creation needed here
@@ -149,8 +149,9 @@ var PropertyWidget = new Class({
 		var elements = Elements.from(this.options.templates.slider.substitute({title: aSliderName}))[0].inject(this.slidersElement),
 			slider = new Slider.Extra(elements.getElement('slider_element'));
 			minLabel = elements.getElement('slider_label_min'),
-			maxLabel = elements.getElement('slider_label_max'),
-			range = slider.addRange(new Element('div', {'class': 'slider_knob_start'}), new Element('div', {'class': 'slider_knob_end'}), {
+			maxLabel = elements.getElement('slider_label_max');
+			
+			slider.addRange(new Element('div', {'class': 'slider_knob_start'}), new Element('div', {'class': 'slider_knob_end'}), {
 				steps: maxValue - minValue,
 				start: {
 					initialStep: initialMin - minValue,
@@ -164,9 +165,7 @@ var PropertyWidget = new Class({
 						maxLabel.set('text', '$' + (minValue + step * this.stepSize));
 					}
 				},
-				onComplete: function(){
-					this.search();
-				}.bind(this);
+				onComplete: this.search
 			});
 			
 		this.sliders.push(slider);
@@ -183,108 +182,83 @@ var PropertyWidget = new Class({
 			 */
 	},
 	
-	beds_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
-		this.options = options;
-		var range = this.options.sliderLength;
-		if ((startmax - startmin) < this.options.sliderLength) {
-			var tickSize = (this.options.sliderLength / (startmax - startmin));
-		}else{
-			tickSize = 1;
-		}
-		var initVals = [ 0,this.options.sliderLength ], // Values assigned during instantiation
-		//Event = YAHOO.util.Event,
-		Dom = YAHOO.util.Dom,
-		dual_slider,
-		scaleFactor = ((startmax - startmin) / this.options.sliderLength); // Custom scale factor for converting the pixel offset into a real value
-		dual_slider = YAHOO.widget.Slider.getHorizDualSlider(
-		bg,minthumb,maxthumb,
-		range, tickSize, initVals);
-		dual_slider.subscribe("change", function(instance) {
-			var a_minvalue = Dom.get(minvalue);
-			var a_maxvalue = Dom.get(maxvalue);
-			a_minvalue.innerHTML = Math.round((dual_slider.minVal * scaleFactor) + startmin);
-			a_maxvalue.innerHTML = Math.round((dual_slider.maxVal * scaleFactor) + startmin);
-			bedsMin = (dual_slider.minVal * scaleFactor) + startmin;
-			bedsMax = (dual_slider.maxVal * scaleFactor) + startmin;
-		});
-
-		dual_slider.subscribe("slideEnd", function(){ limitReset();ajaxSearch(); });
-		return dual_slider;
+	beds_slider: function(bg, startThumb, endThumb, minValue, maxValue, initialMin, initialMax, aSliderName, options) {
+	
+		var elements = Elements.from(this.options.templates.slider.substitute({title: aSliderName}))[0].inject(this.slidersElement),
+			slider = new Slider.Extra(elements.getElement('slider_element'));
+			minLabel = elements.getElement('slider_label_min'),
+			maxLabel = elements.getElement('slider_label_max');
+			
+			slider.addRange(new Element('div', {'class': 'slider_knob_start'}), new Element('div', {'class': 'slider_knob_end'}), {
+				steps: maxValue - minValue,
+				start: {
+					initialStep: initialMin - minValue,
+					onChange: function(step){
+						minLabel.set('text', '$' + (minValue + step * this.stepSize));
+					},
+				},
+				end: {
+					initialStep: maxValue - initialMax,
+					onChange: function(step){
+						maxLabel.set('text', '$' + (minValue + step * this.stepSize));
+					}
+				},
+				onComplete: this.search
+			});
+			
+		this.sliders.push(slider);
 	},
 	
 	baths_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
-		this.options = options;
-		var range = this.options.sliderLength;
-		if ((startmax - startmin) < this.options.sliderLength) {
-			var tickSize = (this.options.sliderLength / (startmax - startmin));
-		}else{
-			tickSize = 1;
-		}
-		var initVals = [ 0,this.options.sliderLength ], // Values assigned during instantiation
-		//Event = YAHOO.util.Event,
-		Dom = YAHOO.util.Dom,
-		dual_slider,
-		scaleFactor = ((startmax - startmin) / this.options.sliderLength); // Custom scale factor for converting the pixel offset into a real value
-		dual_slider = YAHOO.widget.Slider.getHorizDualSlider(
-		bg,minthumb,maxthumb,
-		range, tickSize, initVals);
-		dual_slider.subscribe("change", function(instance) {
-			var a_minvalue = Dom.get(minvalue);
-			var a_maxvalue = Dom.get(maxvalue);
-			a_minvalue.innerHTML = Math.round((dual_slider.minVal * scaleFactor) + startmin);
-			a_maxvalue.innerHTML = Math.round((dual_slider.maxVal * scaleFactor) + startmin);
-			bathsMin = (dual_slider.minVal * scaleFactor) + startmin;
-			bathsMax = (dual_slider.maxVal * scaleFactor) + startmin;
-		});
-
-		dual_slider.subscribe("slideEnd", function(){ limitReset();ajaxSearch(); });
-		return dual_slider;
+		var elements = Elements.from(this.options.templates.slider.substitute({title: aSliderName}))[0].inject(this.slidersElement),
+			slider = new Slider.Extra(elements.getElement('slider_element'));
+			minLabel = elements.getElement('slider_label_min'),
+			maxLabel = elements.getElement('slider_label_max');
+			
+			slider.addRange(new Element('div', {'class': 'slider_knob_start'}), new Element('div', {'class': 'slider_knob_end'}), {
+				steps: maxValue - minValue,
+				start: {
+					initialStep: initialMin - minValue,
+					onChange: function(step){
+						minLabel.set('text', '$' + (minValue + step * this.stepSize));
+					},
+				},
+				end: {
+					initialStep: maxValue - initialMax,
+					onChange: function(step){
+						maxLabel.set('text', '$' + (minValue + step * this.stepSize));
+					}
+				},
+				onComplete: this.search
+			});
+			
+		this.sliders.push(slider);
 	},
 	
 	price_slider: function(bg,minthumb,maxthumb,minvalue,maxvalue,startmin,startmax,aSliderName,options) {
-		this.options = options;
-		var range = this.options.sliderLength;
-		var noLimit = this.options.noLimit;
-		if ((startmax - startmin) < this.options.sliderLength) {
-			var tickSize = (this.options.sliderLength / (startmax - startmin));
-		}else{
-			tickSize = 1;
-		}
-		var initVals = [ 0,this.options.sliderLength ], // Values assigned during instantiation
-		//Event = YAHOO.util.Event,
-		Dom = YAHOO.util.Dom,
-		dual_slider,
-		scaleFactor = ((startmax - startmin) / this.options.sliderLength); // Custom scale factor for converting the pixel offset into a real value
-		dual_slider = YAHOO.widget.Slider.getHorizDualSlider(
-		bg,minthumb,maxthumb,
-		range, tickSize, initVals);
-		dual_slider.subscribe("change", function(instance) {
-			var a_minvalue = Dom.get(minvalue);
-			var a_maxvalue = Dom.get(maxvalue);
-			priceMin = (dual_slider.minVal * scaleFactor) + startmin;
-			priceMax = (dual_slider.maxVal * scaleFactor) + startmin;
-			if ( priceMin == startmin ) {
-				if(noLimit == 1){
-					a_minvalue.innerHTML = langText['nolimit'];
-				}else{
-					a_minvalue.innerHTML = formatCurrency(startmin);
-				}
-			} else {
-				a_minvalue.innerHTML = formatCurrency((dual_slider.minVal * scaleFactor) + startmin);
-			}
-			if ( priceMax == startmax ) {
-				if(noLimit == 1){
-					a_maxvalue.innerHTML = langText['nolimit'];
-				}else{
-					a_maxvalue.innerHTML = formatCurrency(startmax);
-				}
-			} else {
-				a_maxvalue.innerHTML = formatCurrency((dual_slider.maxVal * scaleFactor) + startmin);
-			}
-		});
-
-		dual_slider.subscribe("slideEnd", function(){ limitReset();ajaxSearch(); });
-		return dual_slider;
+		var elements = Elements.from(this.options.templates.slider.substitute({title: aSliderName}))[0].inject(this.slidersElement),
+			slider = new Slider.Extra(elements.getElement('slider_element'));
+			minLabel = elements.getElement('slider_label_min'),
+			maxLabel = elements.getElement('slider_label_max');
+			
+			slider.addRange(new Element('div', {'class': 'slider_knob_start'}), new Element('div', {'class': 'slider_knob_end'}), {
+				steps: maxValue - minValue,
+				start: {
+					initialStep: initialMin - minValue,
+					onChange: function(step){
+						minLabel.set('text', '$' + (minValue + step * this.stepSize));
+					},
+				},
+				end: {
+					initialStep: maxValue - initialMax,
+					onChange: function(step){
+						maxLabel.set('text', '$' + (minValue + step * this.stepSize));
+					}
+				},
+				onComplete: this.search
+			});
+			
+		this.sliders.push(slider);
 	},
 	
 	listProperties: function(input) {
@@ -449,8 +423,7 @@ var PropertyWidget = new Class({
 	
 });
 
-//IpAjaxSearch.implement(new Events);
-//IpAjaxSearch.implement(new Options);
+new PropertyWidget();
 
 /*
 Notes:
