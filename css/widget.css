@@ -1,0 +1,50 @@
+
+#loading_div
+{
+    height: 100% !important;
+	width: 100% !important
+}
+
+#property_sliders
+{
+	overflow: hidden;
+}
+
+.property_slider
+{
+	float: left;
+	width: 315px;
+	padding: 12px 10px;
+}
+
+	.slider_labels
+	{
+		margin-bottom: 3px;
+		text-align: center;
+		overflow: hidden;
+	}
+	
+		.slider_label_min
+		{
+			float: left;
+		}
+		
+		.slider_label_max
+		{
+			float: right;
+		}
+
+	.slider_element
+	{
+		height: 6px;
+		border: 1px solid #999;
+	}
+	
+		.slider_knob_start, .slider_knob_end
+		{
+			width: 6px;
+			height: 12px;
+			margin-top: -4px;
+			background: #ccc;
+			border: 1px solid #999;
+		}
