@@ -326,25 +326,23 @@ Slider.Extra = new Class({
 			slider = new Slider(
 				this.element,
 				knob.setStyles({ 'position': 'absolute', 'z-index': 3 }).inject(this.element),
-				$merge({}, this.options, options || {}, {
-					wheel: false,
-					mode: this.options.mode,
-					onBeforeStart: function(knob, event){
-						self.raiseKnob(knob);
-						self.setLast(this, event);
-					},
-					onStart: function(knob, event){
-						this.draggedKnob();
-						self.setLast(this, event);
-					},
-					onDrag: function(knob, event){
-						self.detectCollision(this, event);
-					},
-					onComplete: function(){
-						this.step = this.toStep(this.knob.getStyle(this.property).toInt());
-					}
-				})
-			).detach();
+				$merge({}, this.options, options || {}, { wheel: false, mode: this.options.mode })
+			).addEvents({
+				beforeStart: function(knob, event){
+					self.raiseKnob(knob);
+					self.setLast(this, event);
+				},
+				start: function(knob, event){
+					this.draggedKnob();
+					self.setLast(this, event);
+				},
+				drag: function(knob, event){
+					self.detectCollision(this, event);
+				},
+				complete: function(){
+					this.step = this.toStep(this.knob.getStyle(this.property).toInt());
+				}
+			}).detach();
 		
 		slider.last = {};
 		slider.drag.attach().removeEvents('complete').addEvent('complete', function(knob, event){
@@ -364,7 +362,8 @@ Slider.Extra = new Class({
 			start = this.addKnob(options.start.knob, options.start, true),
 			end = this.addKnob(options.end.knob, options.end, true),
 			band = new Element('div', $merge({
-				styles: {
+				'class': 'slider_band',
+				'styles': {
 					position: 'absolute',
 					height: this.mode[0],
 					width: this.mode[1],
@@ -440,8 +439,22 @@ Slider.Extra = new Class({
 });
 
 
-
-
+var langText = {};
+langText.tprop = 'Results';
+langText.price = 'Price';
+langText.nolimit = 'No Limit';
+langText.pid = 'Property ID';
+langText.street = 'Street<span class="street_preview">(Click address to view listing)</span>';
+langText.beds = 'Beds';
+langText.baths = 'Baths';
+langText.sqft = 'Ft<sup>2</sup>';
+langText.preview = 'Preview';
+langText.more = 'more';
+langText.inputText = 'ID or Keyword';
+langText.noRecords = 'Sorry, no records were found. Please try again.';
+langText.previous = '&#706; Previous ';
+langText.next = 'Next &#707;';
+langText.of = 'of';
 
 
 
@@ -470,6 +483,11 @@ var PropertyWidget = new Class({
 		itemId: 150,
 		showPreview: 1,
 		noLimit: 0,
+		startPage: 1,
+		currencySeparator: ',',
+		currencySymbol: '$',
+		currencyPosition: 1, 
+		marker: 'http://demo.thethinkery.net/components/com_iproperty/assets/images/map/icon56.png',
 		map: {
 			zoom: 10,
 			mapTypeId: google.maps.MapTypeId.ROADMAP, 
@@ -479,7 +497,7 @@ var PropertyWidget = new Class({
 		search: {
 			city: '',
 			stype: '',
-			limit: 20,
+			limit: 10,
 			limitstart: 0,
 			search: '',
 			option:'com_iproperty',
@@ -490,36 +508,40 @@ var PropertyWidget = new Class({
 			format: 'raw',
 			token: '37ad7e0abd0ecac15bbe6ccd88deb79d'
 		},
+		inputs: {
+			
+		},
 		templates:{
 			slider: '<div class="property_slider">' +
 						'<div class="slider_labels">' +
 							'<span class="slider_label_min">No Limit</span>{title}<span class="slider_label_max">No Limit</span>' +
 						'</div>' +
 						'<div class="slider_element">' +
-							'<div class="slider_knob_start"></div>' +
-							'<div class="slider_knob_end"></div>' +
+							'<div class="slider_knob slider_knob_start"></div>' +
+							'<div class="slider_knob slider_knob_end"></div>' +
 						'</div>' +
 					'</div>',
-			marker: '<div class="bubble">' +
-						'<h4><a href="{proplink}">{street_address}, {city}</a></h4>' +
-						'<p>' +
-							'<b>{langText.pid}:</b>{mls_id}<br />' +
-							'<b>{langText.price}:</b>{formattedprice}' +
-						'</p>' +
-						'{thumb}' +
-						'<div class="bubble_desc">{desc}<a href="{url}">({langText.more})</a></div>' +
-					'</div>',
-			paging: '<tr><td class="ip_pagecount">{pagecount}</td><td class="ip_pagenav">{beginning}{end}</td></tr>', //No need for this to be a table/row setup, move to ul/li when ready
-			pageButton: '<input type="button" class="ipbutton" value="{value}" limit="{limit}" style="display: {display};" />'
+			infoWindow: '<div class="bubble">' +
+							'{thumb}' +
+							'<h4><a href="{proplink}">{street_address}, {city}</a></h4>' +
+							'<div class="bubble_info"><strong>{pid}: </strong>{mls_id} | <strong>{price}: </strong>{formattedprice}</div>' +
+							'<div class="bubble_desc">{short_description}<a href="{proplink}">({more})</a></div>' +
+						'</div>',
+			pager: '<li class="page_range">{pagecount}</li><li class="page_buttons">{previous}{next}</li>',
+			pageButton: '<div class="page_button {class}" style="display: {display};" />{value}</div>'
 		},
 		sliders: {
 			'Price': {
 				steps: 300,
 				range: [500, 800000], 
+				labelUnit: '$',
 				start: {
-					initialStep: 0
+					parameter: 'price_low',
+					initialStep: 0,
+					offset: 2
 				},
 				end: {
+					parameter: 'price_high',
 					initialStep: 800000
 				}
 			},
@@ -527,9 +549,12 @@ var PropertyWidget = new Class({
 				steps: 10,
 				snap: true,
 				start: {
-					initialStep: 0
+					parameter: 'beds_low',
+					initialStep: 0,
+					offset: 2
 				},
 				end: {
+					parameter: 'beds_high',
 					initialStep: 10
 				}
 			},
@@ -537,19 +562,25 @@ var PropertyWidget = new Class({
 				steps: 10,
 				snap: true,
 				start: {
-					initialStep: 0
+					parameter: 'baths_low',
+					initialStep: 0,
+					offset: 2
 				},
 				end: {
+					parameter: 'baths_high',
 					initialStep: 10
 				}
 			},
 			'Square Feet': {
 				steps: 300,
-				range: [0, 65535], 
+				range: [0, 65535],
 				start: {
-					initialStep: 0
+					parameter: 'sqft_low',
+					initialStep: 0,
+					offset: 2
 				},
 				end: {
+					parameter: 'sqft_high',
 					initialStep: 65535
 				}
 			}
@@ -564,21 +595,16 @@ var PropertyWidget = new Class({
 		this.markers = {};
 		this.sliders = [];
 		this.query = {};
-		
-		this.request = new Request.JSON({
-			method: 'get',
-			url: this.options.ipbaseurl + 'index.php',
-			onComplete: this.requestComplete
-			//Shouldn't we have handlers for errors? --> Sure! Wanna add one?
-		});
-		//create DOM
+		this.page = this.options.search.limitstart / this.options.search.limit || 1;
+		this.scroll = new Fx.Scroll(window, { duration: 400, transition: 'quad:out', offset: { y: -2 } });
 		
 		this.mapElement = new Element('div', {
 			id: 'property_map',
 			styles: {
 				height: 300
 			}
-		});
+		}); //.addEvent('click:relay(img[src=' + this.options.marker + '])', function(){});
+		
 		this.slidersElement = new Element('div', {id: 'property_sliders'});
 		this.propertyList = new Element('div', {id: 'property_list'});
 		
@@ -586,8 +612,15 @@ var PropertyWidget = new Class({
 		this.createMap();
 		
 		$each(this.options.sliders, function(v, k){
-			this.createSlider.apply(this, [k, v]);
-		}, this);
+			this.addSlider.apply(this, [k, v]);
+		}, this)
+		
+		this.request = new Request.JSON({
+			method: 'get',
+			url: this.options.ipbaseurl + 'index.php',
+			onComplete: this.requestComplete
+			//Shouldn't we have handlers for errors? --> Sure! Wanna add one?
+		});
 		
 		this.search();
 		
@@ -597,45 +630,51 @@ var PropertyWidget = new Class({
 		//Do we want to try to get GEO?
 		this.options.map.center = new google.maps.LatLng(this.options.map.lat, this.options.map.lng);
 		this.mapInstance = new google.maps.Map(this.mapElement, this.options.map);
+		this.infoWindow = new google.maps.InfoWindow({ maxWidth: 450 });
 		this.loadingElement = new Element('div',{id:'loading_div'}).inject(this.mapElement);
 	},
 	
-	createMarker: function(input) {
-		if(input.lat_pos && input.long_pos){
-			var coord = new google.maps.LatLng(input.lat_pos,input.long_pos),
-			    marker = new google.maps.Marker(coord, this.icon), //this.icon is replacing houseIcon the global, defined in the callback
-			    html = this.getMarkerHtml(input);
+	createMarker: function(house) {
+		if(house.lat_pos && house.long_pos){
+			var latlong = new google.maps.LatLng(house.lat_pos.toFloat(), house.long_pos.toFloat()),
+			    marker = new google.maps.Marker({
+					position: latlong,
+					map: this.mapInstance,
+					icon: this.options.marker
+				}),
+				html = this.getMarkerHtml(house);
 				
-			//this.bounds.extend(coord);
+			this.markers[house.id] = [marker, html];
 			
-			google.maps.event.addListener(marker, "click", function() {
-				this.openInfoWindowHtml(html);
-			});
-
-			//create map marker based on property id
-			this.markers[input.id] = [marker, html];
-			marker.setMap(this.mapInstance);
+			google.maps.event.addListener(marker, 'click', function() {
+				this.openInfoWindow(house.id);
+			}.bind(this));
 			
 			return marker;
 		}
 		else return false;
 	},
 	
-	getMarkerHtml: function(marker) {
-	
-		return this.options.templates.marker.substitute(
-			$merge(marker, {
-				street_address: marker.street_address.clean(),
-				city: marker.city.clean(),
-				short_description: marker.short_description.slice(0,205) + '...',
-				thumb: ('<div class="bubble_image"><a href="{proplink}">{thumb}</a></div>').substitute(marker),
-				langText: langText//hacky copy.
+	getMarkerHtml: function(house) {
+		return this.options.templates.infoWindow.substitute(
+			$merge(house, {
+				street_address: house.street_address.clean(),
+				city: house.city.clean(),
+				short_description: house.short_description.slice(0,185).trim() + '...',
+				thumb: ('<div class="bubble_image"><a href="{proplink}">{thumb}</a></div>').substitute(house),
+				pid: langText.pid,
+				price: langText.price,
+				more: langText.more
 			})
 		);
 		
 	},
 	
-	createSlider: function(title, options){
+	addInput: function(){
+		
+	},
+	
+	addSlider: function(title, options){
 		var elements = Elements.from(this.options.templates.slider.substitute({title: title}))[0].inject(this.slidersElement),
 			slider = new Slider.Extra(elements.getElement('.slider_element')),
 			minLabel = elements.getElement('.slider_label_min'),
@@ -645,16 +684,21 @@ var PropertyWidget = new Class({
 			start: {
 				knob: elements.getElement('.slider_knob_start'),
 				onChange: function(step){
-					minLabel.set('text', '$' + step);
+					minLabel.set('text', (options.labelUnit || '') + step);
 				},
 			},
 			end: {
 				knob: elements.getElement('.slider_knob_end'),
 				onChange: function(step){
-					maxLabel.set('text', '$' + step);
+					maxLabel.set('text', (options.labelUnit || '') + step);
 				}
 			},
-			onComplete: this.search	
+			onComplete: function(){
+				if(this.request){
+					this.page = 1;
+					this.search();
+				}
+			}.bind(this)
 		}, options));
 		
 		this.sliders.push(slider);
@@ -665,7 +709,6 @@ var PropertyWidget = new Class({
 	createTable: function(data) {
 	
 		var options = this.options.search,
-			totalCount = data[0].totalcount,
 			tableHeaders = [];
 		
 		//$('advmap_counter').set('html', totalCount);
@@ -692,12 +735,16 @@ var PropertyWidget = new Class({
 			headers: tableHeaders
 		});
 		
-		this.table.toElement().addEvents({
-			'mouseenter:relay(a[preview=mouseenter])': this.openInfoWindow,
-			'click:relay(a[preview=click])': this.openInfoWindow
-		}).inject(this.propertyList);
+		var infoOpener = function(e){
+			this.openInfoWindow(e.target.get('resultid'))
+		}.bind(this);
 		
-		// new sortableTable(this.table, {overCls: 'over', sortBy: 'DESC'}); FIXME: this is the old sortable table script, get this working with HtmlTable from More
+		this.table.toElement().addEvents({
+			'mouseover:relay(a[preview=mouseover])': infoOpener,
+			'click:relay(a[preview=click])': function(e){
+				this.scroll.toElement(this.element).chain(function(){ infoOpener(e) });
+			}.bind(this)
+		}).inject(this.propertyList);
 		
 		this.createPaging();
 		
@@ -706,67 +753,112 @@ var PropertyWidget = new Class({
 	
 	createPaging: function(){
 		var pagingClick = {
-				'click:relay(input.ipbutton)': function(){
-					var limit = e.target.get('limit');
-					if(limit){ this.ajaxPage.pass(limit);}
+				'mousedown:relay(div.page_button)': function(){
+					this.addClass('pressed');
+				},
+				'mouseup:relay(div.page_button)': function(){
+					this.removeClass('pressed');
+				},
+				'click:relay(div.previous_page)': function(e){
+					if(this.page > 1){
+						this.page--;
+						this.search();
+					}
+				}.bind(this),
+				'click:relay(div.next_page)': function(e){
+					if(this.checkLimit(this.page + 1)){
+						this.page++;
+						this.search();
+					}
 				}.bind(this)
 			},
 			table = this.table.toElement();
 			
-		this.paging = [
-			new Element('table', {
-				'class': 'ip_pagination',
+		this.pagers = [
+			new Element('ul', {
+				'class': 'property_pager',
 				'events': pagingClick
 			}).inject(table, 'before')
 		];	
 			
-		this.paging.push(this.paging[0].clone().addEvents(pagingClick).inject(table, 'after'));
+		this.pagers.push(this.pagers[0].clone().addEvents(pagingClick).inject(table, 'after'));
 			
 		return this;
 	},
 	
+	/*
 	formatCurrency: function(num) {
 		var symbol = this.options.currencySymbol,
-			separator = (this.options.currencyFormat == 1) ? ',' : '.';
+			split = (num + '').split('.'),
+			wholes = split[0],
+			rgx = /(\d+)(\d{3})/;
 
-		num = num.toString().replace(/\$|\,/g, '');
+		while (rgx.test(wholes)) wholes = wholes.replace(rgx, '$1' + this.options.currencySeparator + '$2');
 		
-		if(!$type(num)){
-			num = 0;
-			num = Math.floor(num * 100 + 0.50000000001); //sign = (num == (num = Math.abs(num)));
-			num = Math.floor(num / 100).toString(); //cents = num%100;
-		}
-		//if(cents<10) cents = "0" + cents;
-		for (var i = 0; i < Math.floor((num.length - (1 + i)) / 3); i++){
-			num = num.substring(0, num.length - (4 * i + 3)) + separator + num.substring(num.length - (4 * i + 3));
-		}
-		//return (((sign)?'':'-') + '$' + num);
+		num = wholes + split.length > 1 ? '.' + split[1] : '';
 		
-		return (this.options.currencyPos == 1) ? num + ' ' + symbol : symbol + num;
+		return (this.options.currencyPosition == 1) ? num + ' ' + symbol : symbol + num;
+	},
+	*/
+	
+	checkLimit: function(page){
+		var limit = this.options.search.limit,
+			max = page * limit;
+		
+		return (page > 0 && this.totalCount >= max - limit &&  max <= this.totalCount) ? true : false;
 	},
 	
-	addCommas: function(num){
-		var split = (num + '').split('.'),
-			whole = split[0],
-			rgx = /(\d+)(\d{3})/;
-		
-		while (rgx.test(whole)){ whole = whole.replace(rgx, '$1' + ',' + '$2');}
-		
-		return whole + ((split[1]) ? '.' : '');
+	getSliderValues: function(){
+		var parameters = {};
+		this.element.getElements('div.slider_knob').retrieve('slider').each(function(slider){
+			parameters[slider.options.parameter] = slider.previousChange;
+		});
+		return parameters;
 	},
 	
 	search: function(){
 		this.loadingElement.show();
-		this.query = $merge(this.options.search,{ //get the value of the form elements associated with the search options
-			//search: this.searchInput.value,
-			//limit: document.slider_search.limit.value,
-			//limitstart: document.slider_search.limitstart.value  || 0,
-			//city: this.cityInput.value,
+		this.query = $merge(this.options.search, { //get the value of the form elements associated with the search options
+				limitstart: this.page * this.options.search.limit - this.options.search.limit
+			},
+			this.getSliderValues()
+		);
+			//,
+			//$H(this.inputs).map(function(e){ return e.value; })
 			//stype: this.stypeInput.value,
 			//hoa: this.options.showHoa ? this.hoaInput.checked ? 1:0 :'',
 			//reo: this.options.showReo ?this.reoInput.checked ? 1:0 : '',
 			//waterfront: this.options.showWf ?this.waterfrontInput.checked ? 1:0 : '',
-		});
+			
+			/*
+			baths_high	10
+			baths_low	0
+			beds_high	10
+			beds_low	0
+			c6435f61d0313bf5eace0fab1...	1
+			city	
+			country	
+			county	
+			format	raw
+			hoa	0
+			limit	10
+			limitstart	0
+			locstate	
+			option	com_iproperty
+			price_high	
+			price_low	
+			province	
+			ptype	
+			region	
+			reo	0
+			search	
+			sqft_high	10000
+			sqft_low	800
+			stype	
+			task	ajaxSearch
+			view	advsearch
+			waterfront	0
+			*/
 		
 		var ptype = $$("[name=ptype[]]");
 		if(ptype) this.query.ptype = ptype.map(function(e){
@@ -779,18 +871,16 @@ var PropertyWidget = new Class({
 	requestComplete: function(data){
 		this.fireEvent('requestComplete');
 		this.results = data;
+		this.totalCount = data[0].totalcount;
 		this.loadingElement.hide();
 		this.updateTable(data);
-		//this.updateMap();
 	},
 	
-	openInfoWindow: function(e) {
-		var item = this.markers[e.target.id];
-		item[0].openInfoWindowHtml(item[1]);
-	},
-	
-	updateMap: function(){
-		
+	openInfoWindow: function(id) {
+		var marker = this.markers[id];
+		this.infoWindow.close();
+		this.infoWindow.setContent(marker[1])
+		this.infoWindow.open(this.mapInstance, marker[0]);
 	},
 	
 	updateTable: function(data){
@@ -799,20 +889,20 @@ var PropertyWidget = new Class({
 		this.table.empty();
 		
 		var options = this.options.search,
-			totalCount = data[0].totalcount,
 			tableRows = [];
 			
-		if (totalCount > 0){
+		if (this.totalCount > 0){
 			data.each(function(e, i){
+				
 				var marker = this.createMarker(e),
 					row = [
 						data[i].formattedprice,
 						data[i].mls_id,
-						'<a href="' + data[i].proplink + '" ' + ((this.options.showPreview == 1 && marker) ? 'preview="mouseenter"' : '') + '">' + data[i].street_address.clean() + ', ' + data[i].city.clean() + '</a>',
+						'<a resultid="' + data[i].id + '" href="' + data[i].proplink + '" ' + ((this.options.showPreview == 1 && marker) ? 'preview="mouseover"' : '') + '>' + data[i].street_address.clean() + ', ' + data[i].city.clean() + '</a>',
 						data[i].beds,
 						data[i].baths,
 						data[i].sqft,
-						(marker) ? '<a href="#" preview="click">' + langText.preview + '</a>' : '--'
+						(marker) ? '<a resultid="' + data[i].id + '" href="#preview_'+ data[i].id +'" preview="click">' + langText.preview + '</a>' : '--'
 					];
 				tableRows.push(row);	
 			}, this);
@@ -836,48 +926,29 @@ var PropertyWidget = new Class({
 	},
 		
 	updatePaging: function(data){
-		
 		var options = this.options.search,
-			totalCount = data[0].totalcount,
-			prevLimit = (options.limitstart - options.limit).limit(0, options.limit),
-			nextLimit = (options.limitstart + options.limit).limit(0, totalCount), //if nextLimit is larger than total, hide next button and set maxcount to total
+			prevLimit = (this.page * options.limit - options.limit).limit(0, this.totalCount),
+			nextLimit = (this.page * options.limit).limit(0, this.totalCount),
 			pagingData = {
-				pagecount: langText.tprop + ': ' + options.limitstart + '-' + nextLimit + ' ' + langText.of + ' ' + totalCount,
-				beginning: this.options.templates.pageButton.substitute({
-					value: langText.previous,
-					limit: prevLimit,
-					display: (!prevLimit) ? 'none' : 'inline'
+				pagecount: langText.tprop + ': ' + prevLimit + '-' + nextLimit + ' ' + langText.of + ' ' + this.totalCount,
+				previous: this.options.templates.pageButton.substitute({
+					'class': 'previous_page',
+					'value': langText.previous,
+					'display': (!prevLimit) ? 'none' : 'block'
 				}),
-				end: this.options.templates.pageButton.substitute({
-					value: langText.next,
-					limit: nextLimit,
-					display: (nextLimit == totalCount) ? 'none' : 'inline'
+				next: this.options.templates.pageButton.substitute({
+					'class': 'next_page',
+					'value': langText.next,
+					'display': (nextLimit == this.totalCount) ? 'none' : 'block'
 				})
 			};
 			
-			this.paging.each(function(pager){
-				pager.set('html', this.options.templates.paging.substitute(pagingData))
+			this.pagers.each(function(pager){
+				pager.set('html', this.options.templates.pager.substitute(pagingData));
 			}, this);
 			
 			return this;
 		
-	},
-	
-	readMap: function(data) {
-		data = JSON.decode(data);
-		
-		this.bounds = new google.maps.LatLngBounds();
-		this.mapInstance.getInfoWindow().hide(); // hide the info window, otherwise it still stays open where the removed marker used to be
-		this.mapInstance.clearOverlays();
-		this.markers = {};
-		
-		//$('advmap_nofound')[data.length <= 0 ? 'show' : 'hide'](); //TODO: if no maps found, display advmap_nofound div with no search criteria met
-
-		//this.createTable(data); //create sortable table list
-		//this.mapInstance.setZoom(this.mapInstance.getBoundsZoomLevel(this.bounds));
-		//this.mapInstance.setCenter(this.bounds.getCenter());
-		
-		return this;
 	}
 	
 });
@@ -885,9 +956,21 @@ var PropertyWidget = new Class({
 
 // Testing stuff
 
-Asset.css('http://www.backalleycoder.com/thinkery/css/widget.css');
+var loadCSS = function(url, callback){
+	var link = Asset.css(url);
+	var img = new Element('img', {
+		events: {
+			error: function(e){
+				if(callback) callback(link);
+				img.destroy();
+			}
+		}
+	}).inject($$('html')[0]);
+	
+	img.src = url;
+}
 
-setTimeout(function(){
+loadCSS('http://www.backalleycoder.com/thinkery/css/widget.css', function(){
 
 new PropertyWidget('maincontent-block', {
 	ipbaseurl: 'http://demo.thethinkery.net/',
@@ -900,10 +983,13 @@ new PropertyWidget('maincontent-block', {
 	currencyPos: 0,
 	currencyFormat: 1,
 	maxZoom: 21,
-	thumbnail: 1
+	thumbnail: 1,
+	search: {
+		limit: 3
+	}
 });
 
-}, 2000);
+});
 /*
 Notes:
 langText is a global object. Though it's wrongly declaired as an Array. It just has localization strings for labels. 
@@ -917,3 +1003,4 @@ We should probably break this thing into two parts:
 2. The part that updates the google map and places the markers.
 
 */
+

@@ -19,6 +19,7 @@
 
 	.slider_labels
 	{
+		position: relative;
 		margin-bottom: 3px;
 		text-align: center;
 		overflow: hidden;
@@ -26,12 +27,16 @@
 	
 		.slider_label_min
 		{
-			float: left;
+			position: absolute;
+			top: 0;
+			left: 0;
 		}
 		
 		.slider_label_max
 		{
-			float: right;
+			position: absolute;
+			top: 0;
+			right: 0;
 		}
 
 	.slider_element
