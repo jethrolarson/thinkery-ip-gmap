@@ -444,7 +444,7 @@ langText.tprop = 'Results';
 langText.price = 'Price';
 langText.nolimit = 'No Limit';
 langText.pid = 'Property ID';
-langText.street = 'Street<span class="street_preview">(Click address to view listing)</span>';
+langText.street = '<div>Street<span class="street_preview">(Click address to view listing)</span></div>';
 langText.beds = 'Beds';
 langText.baths = 'Baths';
 langText.sqft = 'Ft<sup>2</sup>';
@@ -472,7 +472,7 @@ var PropertyWidget = new Class({
 	
 	Implements: [Events, Chain, Options],
 	
-	Binds: ['googleCallback', 'requestComplete'],
+	Binds: ['googleCallback', 'requestComplete', 'createMarker'],
 	
 	options: {
 		ipbaseurl: '',
@@ -509,26 +509,23 @@ var PropertyWidget = new Class({
 			token: '37ad7e0abd0ecac15bbe6ccd88deb79d'
 		},
 		inputs: {
-			
-		},
-		templates:{
-			slider: '<div class="property_slider">' +
-						'<div class="slider_labels">' +
-							'<span class="slider_label_min">No Limit</span>{title}<span class="slider_label_max">No Limit</span>' +
-						'</div>' +
-						'<div class="slider_element">' +
-							'<div class="slider_knob slider_knob_start"></div>' +
-							'<div class="slider_knob slider_knob_end"></div>' +
-						'</div>' +
-					'</div>',
-			infoWindow: '<div class="bubble">' +
-							'{thumb}' +
-							'<h4><a href="{proplink}">{street_address}, {city}</a></h4>' +
-							'<div class="bubble_info"><strong>{pid}: </strong>{mls_id} | <strong>{price}: </strong>{formattedprice}</div>' +
-							'<div class="bubble_desc">{short_description}<a href="{proplink}">({more})</a></div>' +
-						'</div>',
-			pager: '<li class="page_range">{pagecount}</li><li class="page_buttons">{previous}{next}</li>',
-			pageButton: '<div class="page_button {class}" style="display: {display};" />{value}</div>'
+			'Sale Type': {
+				tag: 'select',
+				parameter: 'stype',
+				value: { 'For Rent': 4, 'For Sale': 1 },
+				events: {
+					'change': function(event, element){
+						// console.log(this, event, element);
+						// this == the class instance, as opposed to the element,
+						// the element is passed as the second argument instead.
+					}
+				}
+			},
+			'Water Front': {
+				tag: 'input',
+				type: 'checkbox',
+				parameter: 'waterfront'
+			}
 		},
 		sliders: {
 			'Price': {
@@ -584,8 +581,26 @@ var PropertyWidget = new Class({
 					initialStep: 65535
 				}
 			}
+		},
+		templates:{
+			slider: '<div class="property_slider">' +
+						'<div class="slider_labels">' +
+							'<span class="slider_label_min">No Limit</span>{title}<span class="slider_label_max">No Limit</span>' +
+						'</div>' +
+						'<div class="slider_element">' +
+							'<div class="slider_knob slider_knob_start"></div>' +
+							'<div class="slider_knob slider_knob_end"></div>' +
+						'</div>' +
+					'</div>',
+			infoWindow: '<div class="bubble">' +
+							'{thumb}' +
+							'<h4><a href="{proplink}">{street_address}, {city}</a></h4>' +
+							'<div class="bubble_info"><strong>{pid}: </strong>{mls_id} | <strong>{price}: </strong>{formattedprice}</div>' +
+							'<div class="bubble_desc">{short_description}<a href="{proplink}">({more})</a></div>' +
+						'</div>',
+			pager: '<li class="page_range">{pagecount}</li><li class="page_buttons">{previous}{next}</li>',
+			pageButton: '<div class="page_button gradient-button {class}" style="display: {display};" />{value}</div>'
 		}
-		// New options:
 	},
 	
 	initialize: function(element, options){
@@ -594,6 +609,7 @@ var PropertyWidget = new Class({
 		this.element = $(element);
 		this.markers = {};
 		this.sliders = [];
+		this.inputs = [];
 		this.query = {};
 		this.page = this.options.search.limitstart / this.options.search.limit || 1;
 		this.scroll = new Fx.Scroll(window, { duration: 400, transition: 'quad:out', offset: { y: -2 } });
@@ -603,16 +619,31 @@ var PropertyWidget = new Class({
 			styles: {
 				height: 300
 			}
-		}); //.addEvent('click:relay(img[src=' + this.options.marker + '])', function(){});
+		});
 		
 		this.slidersElement = new Element('div', {id: 'property_sliders'});
+		this.attributesPanel = new Element('div', {
+			id: 'property_attributes',
+			html: '<div class="property_attributes_inputs"></div><div class="property_attributes_button gradient-button">Search Options</div>',
+			events: {
+				'click:relay(div.property_attributes_button)': function(){
+					if(!this.hasClass('pressed')) this.addClass('pressed').getPrevious().set('tween', { duration: 250, transition: 'circ:out' }).tween('height', 60);
+					else this.removeClass('pressed').getPrevious().tween('height', 0);
+				}
+			}
+		});
+		
 		this.propertyList = new Element('div', {id: 'property_list'});
 		
-		this.element.adopt(this.mapElement, this.slidersElement, this.propertyList);
+		this.element.adopt(this.mapElement, this.slidersElement, this.attributesPanel, this.propertyList);
 		this.createMap();
 		
+		$each(this.options.inputs, function(v, k){
+			this.addInput(k, v);
+		}, this)
+		
 		$each(this.options.sliders, function(v, k){
-			this.addSlider.apply(this, [k, v]);
+			this.addSlider(k, v);
 		}, this)
 		
 		this.request = new Request.JSON({
@@ -667,11 +698,40 @@ var PropertyWidget = new Class({
 				more: langText.more
 			})
 		);
-		
 	},
 	
-	addInput: function(){
+	addInput: function(title, options){
+		var self = this,
+			input = new Element(options.tag, {
+				'title': title,
+				'type': options.type || null,
+				'parameter': options.parameter,
+				'events': $H(options.events || {}).map(function(fn){ return function(e){ fn.call(self, e, this) }; }) 
+			}).inject(this.attributesPanel.getFirst());
+			
+		input.addEvent('change', function(){
+			if(self.request){
+				self.page = 1;
+				self.search();
+			}
+		});
 		
+		switch(options.type || options.tag){
+			case 'select':
+				[title, $H(options.value).getKeys()].flatten().each(function(option){
+					new Element('option', {
+						'text': option,
+						'value': options.value[option]
+					}).inject(input);
+				});
+			break;
+			
+			case 'checkbox': new Element('label', { text: title, value: options.value }).wraps(input); break;
+		}
+		
+		this.inputs.push(input);
+		
+		return this;
 	},
 	
 	addSlider: function(title, options){
@@ -713,19 +773,8 @@ var PropertyWidget = new Class({
 		
 		//$('advmap_counter').set('html', totalCount);
 		
-		$H({
-			'price': 'currency',
-			'pid': 'string',
-			'street': 'string',
-			'beds': 'number',
-			'baths': 'number',
-			'sqft': 'number',
-			'preview': 'noaxis'
-		}).each(function(v, k){
-			tableHeaders.push({
-				content: langText[k],
-				properties: { axis: v }
-			});
+		['price', 'pid', 'street', 'beds', 'baths', 'sqft', 'preview'].each(function(e){
+			tableHeaders.push({ content: langText[e] });
 		});
 		
 		this.table = new HtmlTable({
@@ -733,7 +782,7 @@ var PropertyWidget = new Class({
 				'id': 'prop_table'
 			},
 			headers: tableHeaders
-		});
+		}).enableSort();
 		
 		var infoOpener = function(e){
 			this.openInfoWindow(e.target.get('resultid'))
@@ -810,8 +859,16 @@ var PropertyWidget = new Class({
 	
 	getSliderValues: function(){
 		var parameters = {};
-		this.element.getElements('div.slider_knob').retrieve('slider').each(function(slider){
+		this.slidersElement.getElements('div.slider_knob').retrieve('slider').each(function(slider){
 			parameters[slider.options.parameter] = slider.previousChange;
+		});
+		return parameters;
+	},
+	
+	getInputValues: function(){
+		var parameters = {};
+		this.attributesPanel.getElements('[parameter]').each(function(input){
+			parameters[input.get('parameter')] = (input.get('type') == 'checkbox') ? ((input.checked) ? 1 : 0) : input.value;
 		});
 		return parameters;
 	},
@@ -821,7 +878,8 @@ var PropertyWidget = new Class({
 		this.query = $merge(this.options.search, { //get the value of the form elements associated with the search options
 				limitstart: this.page * this.options.search.limit - this.options.search.limit
 			},
-			this.getSliderValues()
+			this.getSliderValues(),
+			this.getInputValues()
 		);
 			//,
 			//$H(this.inputs).map(function(e){ return e.value; })
@@ -860,10 +918,10 @@ var PropertyWidget = new Class({
 			waterfront	0
 			*/
 		
-		var ptype = $$("[name=ptype[]]");
+		/* var ptype = $$("[name=ptype[]]");
 		if(ptype) this.query.ptype = ptype.map(function(e){
 						if(e.checked) return e.value;
-					}).join(',');
+					}).join(','); */
 
 		this.request.send({data: this.query});
 	},
@@ -872,15 +930,19 @@ var PropertyWidget = new Class({
 		this.fireEvent('requestComplete');
 		this.results = data;
 		this.totalCount = data[0].totalcount;
-		this.loadingElement.hide();
+		this.updateMap(data);
 		this.updateTable(data);
+		this.updatePaging(data);
+		this.loadingElement.hide();
 	},
 	
-	openInfoWindow: function(id) {
-		var marker = this.markers[id];
-		this.infoWindow.close();
-		this.infoWindow.setContent(marker[1])
-		this.infoWindow.open(this.mapInstance, marker[0]);
+	updateMap: function(data){
+		$each(this.markers, function(marker, id, markers){
+			marker[0].setMap(null);
+			delete markers[id];
+		});
+		data.each(this.createMarker);
+		return this;
 	},
 	
 	updateTable: function(data){
@@ -891,22 +953,23 @@ var PropertyWidget = new Class({
 		var options = this.options.search,
 			tableRows = [];
 			
-		if (this.totalCount > 0){
+		if (this.totalCount > 0) {
 			data.each(function(e, i){
-				
-				var marker = this.createMarker(e),
+				var hasMarker = this.markers[e.id],
 					row = [
-						data[i].formattedprice,
-						data[i].mls_id,
-						'<a resultid="' + data[i].id + '" href="' + data[i].proplink + '" ' + ((this.options.showPreview == 1 && marker) ? 'preview="mouseover"' : '') + '>' + data[i].street_address.clean() + ', ' + data[i].city.clean() + '</a>',
-						data[i].beds,
-						data[i].baths,
-						data[i].sqft,
-						(marker) ? '<a resultid="' + data[i].id + '" href="#preview_'+ data[i].id +'" preview="click">' + langText.preview + '</a>' : '--'
+						e.formattedprice,
+						e.mls_id,
+						'<a resultid="' + e.id + '" href="' + e.proplink + '" ' + ((this.options.showPreview == 1 && hasMarker) ? 'preview="mouseover"' : '') + '>' + e.street_address.clean() + ', ' + e.city.clean() + '</a>',
+						e.beds,
+						e.baths,
+						e.sqft,
+						(hasMarker) ? '<a resultid="' + e.id + '" href="#preview_'+ e.id +'" preview="click">' + langText.preview + '</a>' : '--'
 					];
-				tableRows.push(row);	
+				tableRows.push(row);
+				
 			}, this);
-		}else{
+		}
+		else {
 			tableRows.push([{
 				content: langText.noRecords,
 				properties: {
@@ -919,8 +982,6 @@ var PropertyWidget = new Class({
 		tableRows.each(function(row){
 			this.table.push(row);
 		}, this);
-		
-		this.updatePaging(data);
 		
 		return this;
 	},
@@ -943,12 +1004,18 @@ var PropertyWidget = new Class({
 				})
 			};
 			
-			this.pagers.each(function(pager){
-				pager.set('html', this.options.templates.pager.substitute(pagingData));
-			}, this);
+		this.pagers.each(function(pager){
+			pager.set('html', this.options.templates.pager.substitute(pagingData));
+		}, this);
 			
-			return this;
-		
+		return this;
+	},
+	
+	openInfoWindow: function(id) {
+		var marker = this.markers[id];
+		this.infoWindow.close();
+		this.infoWindow.setContent(marker[1])
+		this.infoWindow.open(this.mapInstance, marker[0]);
 	}
 	
 });
