@@ -597,25 +597,6 @@ var PropertyWidget = new Class({
 	
 });
 
-
-// Testing stuff
-
-var loadCSS = function(url, callback){
-	var link = Asset.css(url);
-	var img = new Element('img', {
-		events: {
-			error: function(e){
-				if(callback) callback(link);
-				img.destroy();
-			}
-		}
-	}).inject($$('html')[0]);
-	
-	img.src = url;
-}
-
-loadCSS('http://www.backalleycoder.com/thinkery/css/widget.css', function(){
-
 new PropertyWidget('maincontent-block', {
 	ipbaseurl: 'http://demo.thethinkery.net/',
 	sliderLength: 300,
@@ -632,6 +613,3 @@ new PropertyWidget('maincontent-block', {
 		limit: 3
 	}
 });
-
-});
-
