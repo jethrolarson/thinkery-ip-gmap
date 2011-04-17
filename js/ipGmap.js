@@ -1,473 +1,4 @@
 
-var Slider = new Class({
-
-	Implements: [Events, Options],
-
-	Binds: ['clickedElement', 'draggedKnob', 'scrolledElement'],
-
-	options: {
-		//onTick: function(intPosition){},
-		//onChange: function(intStep){},
-		//onComplete: function(strStep){},
-		onTick: function(position){
-			this.setKnobPosition(position);
-		},
-		onStart: function(){
-			this.draggedKnob();
-		},
-		onDrag: function(){
-			this.draggedKnob();
-		},
-		initialStep: 0,
-		snap: false,
-		offset: 0,
-		range: false,
-		wheel: false,
-		steps: 100,
-		mode: 'horizontal'
-	},
-
-	initialize: function(element, knob, options){
-		this.setOptions(options);
-		options = this.options;
-		this.element = document.id(element);
-		knob = this.knob = document.id(knob);
-		this.previousChange = this.previousEnd = this.step = -1;
-
-		var limit = {},
-			modifiers = {x: false, y: false};
-
-		switch (options.mode){
-			case 'vertical':
-				this.axis = 'y';
-				this.property = 'top';
-				this.offset = 'offsetHeight';
-				break;
-			case 'horizontal':
-				this.axis = 'x';
-				this.property = 'left';
-				this.offset = 'offsetWidth';
-		}
-
-		this.setSliderDimensions();
-		this.setRange(options.range);
-
-		if (knob.getStyle('position') == 'static') knob.setStyle('position', 'relative');
-		knob.setStyle(this.property, -options.offset);
-		modifiers[this.axis] = this.property;
-		limit[this.axis] = [-options.offset, this.full - options.offset];
-
-		var self = this,
-			dragOptions = {
-				snap: 0,
-				limit: limit,
-				modifiers: modifiers,
-				onBeforeStart: function(knob, event){
-					self.fireEvent('beforeStart', [knob, event]);
-					self.isDragging = true;
-				},
-				onStart: function(knob, event){
-					self.fireEvent('start', [knob, event]);
-				},
-				onDrag: function(knob, event){
-					self.fireEvent('drag', [knob, event]);
-				},
-				onCancel: function(){
-					self.isDragging = false;
-				},
-				onComplete: function(){
-					self.isDragging = false;
-					self.draggedKnob();
-					self.end();
-				}
-		};
-		if (options.snap) this.setSnap(dragOptions);
-
-		this.drag = new Drag(knob, dragOptions);
-		this.attach();
-		if (options.initialStep != null) this.set(options.initialStep);
-	},
-
-	attach: function(){
-		this.element.addEvent('mousedown', this.clickedElement);
-		if (this.options.wheel) this.element.addEvent('mousewheel', this.scrolledElement);
-		this.drag.attach();
-		return this;
-	},
-
-	detach: function(){
-		this.element.removeEvent('mousedown', this.clickedElement)
-					.removeEvent('mousewheel', this.scrolledElement);
-		this.drag.detach();
-		return this;
-	},
-
-	autosize: function(){
-		this.setSliderDimensions()
-			.setKnobPosition(this.toPosition(this.step));
-		this.drag.options.limit[this.axis] = [-this.options.offset, this.full - this.options.offset];
-		if (this.options.snap) this.setSnap();
-		return this;
-	},
-
-	setSnap: function(options){
-		if (!options) options = this.drag.options;
-		options.grid = Math.ceil(this.stepWidth);
-		options.limit[this.axis][1] = this.element[this.offset];
-		return this;
-	},
-
-	setKnobPosition: function(position){
-		if (this.options.snap) position = this.toPosition(this.step);
-		this.knob.setStyle(this.property, position);
-		return this;
-	},
-
-	setSliderDimensions: function(){
-		this.full = this.element.measure(function(){
-			this.half = this.knob[this.offset] / 2;
-			return this.element[this.offset] - this.knob[this.offset] + (this.options.offset * 2);
-		}.bind(this));
-		return this;
-	},
-
-	set: function(step){
-		if (!((this.range > 0) ^ (step < this.min))) step = this.min;
-		if (!((this.range > 0) ^ (step > this.max))) step = this.max;
-
-		this.step = Math.round(step);
-		return this.checkStep()
-			.fireEvent('tick', this.toPosition(this.step))
-			.end();
-	},
-
-	setRange: function(range, pos){
-		this.min = $pick(range[0], 0);
-		this.max = $pick(range[1], this.options.steps);
-		this.range = this.max - this.min;
-		this.steps = this.options.steps || this.full;
-		this.stepSize = Math.abs(this.range) / this.steps;
-		this.stepWidth = this.stepSize * this.full / Math.abs(this.range);
-		if (range) this.set($pick(pos, this.step).floor(this.min).max(this.max));
-		return this;
-	},
-
-	clickedElement: function(event){
-		if (this.isDragging || event.target == this.knob) return;
-
-		var dir = this.range < 0 ? -1 : 1,
-			position = event.page[this.axis] - this.element.getPosition()[this.axis] - this.half;
-			position = position.limit(-this.options.offset, this.full - this.options.offset);
-
-		this.step = Math.round(this.min + dir * this.toStep(position));
-		this.checkStep()
-			.fireEvent('tick', position)
-			.end();
-	},
-
-	scrolledElement: function(event){
-		var mode = (this.options.mode == 'horizontal') ? (event.wheel < 0) : (event.wheel > 0);
-		this.set(this.step + (mode ? -1 : 1) * this.stepSize);
-		event.stop();
-	},
-
-	draggedKnob: function(){
-		var dir = this.range < 0 ? -1 : 1,
-			position = this.drag.value.now[this.axis];
-			position = position.limit(-this.options.offset, this.full -this.options.offset);
-
-		this.step = Math.round(this.min + dir * this.toStep(position));
-		
-		this.checkStep();
-	},
-	
-	checkStep: function(){
-		var step = this.step;
-		this.knob.setStyle(this.property, this.toPosition(this.step));
-		if (this.previousChange != step){
-			this.previousChange = step;
-			this.fireEvent('change', step);
-		}
-		return this;
-	},
-
-	end: function(){
-		var step = this.step;
-		if (this.previousEnd !== step){
-			this.previousEnd = step;
-			this.fireEvent('complete', step + '');
-		}
-		return this;
-	},
-
-	toStep: function(position){
-		var step = (position + this.options.offset) * this.stepSize / this.full * this.steps;
-		return this.options.steps ? Math.round(step -= step % this.stepSize) : step;
-	},
-
-	toPosition: function(step){
-		return (this.full * Math.abs(this.min - step)) / (this.steps * this.stepSize) - this.options.offset;
-	},
-	
-	toElement: function(){
-		return this.knob;
-	}
-
-});
-
-
-/*
----
-
-script: Slider.Extra.js
-
-name: Slider.Extra
-
-description: Class for creating horizontal and vertical slider controls.
-
-license: MIT-style license
-
-authors:
-  - Daniel Buchner
-
-requires:
-  - Core/Element.Dimensions
-  - /Class.Binds
-  - /Drag
-  - /Element.Measure
-  - /Slider
-
-provides: [Slider.Extra]
-
-...
-*/
-
-Slider.Extra = new Class({
-	
-	Binds: ['setLast', 'startResize', 'endResize'],
-	
-	Implements: [Events, Options],
-	
-	options: {
-		collision: false,
-		rangeBackground: '#64992C',
-		initialStep: 0,
-		snap: false,
-		offset: 0,
-		range: false,
-		steps: 100,
-		mode: 'horizontal'
-	},
-	
-	initialize: function(element, options){
-		this.setOptions(options);
-		
-		this.element = $(element);
-		this.sliders = [];
-		this.bands = [];
-		this.mode = (this.options.mode == 'horizontal') ? ['100%', 'auto', 'right', 'x'] : ['auto', '100%', 'bottom', 'y'];
-		
-		if (this.element.getStyle('position') == 'static') this.element.setStyle('position', 'relative');
-	},
-	
-	setLast: function(slider, event, useExisting){
-		var last = slider.last;
-		
-		last.value = slider.drag.value.now[slider.axis];
-		last.style = slider.knob.getStyle(slider.property).toInt();
-		last.direction = last.direction || 0;
-		last.bounds = this.getBounds(slider);
-		
-		return this;
-	},
-	
-	getBounds: function(slider){
-		var bounds = { '-1': undefined, '1': undefined },
-			last = slider.last;
-			
-		this.sliders.each(function(e){
-			if(e.options.collision && e.knob != slider.knob || e.relatedSlider && e.relatedSlider.knob == slider.knob){
-				var style = e.knob.getStyle(e.property).toInt();
-				if (style < last.style || style == last.style && last.direction == -1) bounds['-1'] = (style > bounds['-1']) ? style : bounds['-1'] || style;
-				if (style > last.style || style == last.style && last.direction == 1) bounds['1'] = (style < bounds['1']) ? style : bounds['1'] || style;
-			}
-		});
-		
-		return bounds;
-	},
-	
-	detectCollision: function(slider, event){
-		var value = slider.drag.value.now[slider.axis],
-			last = slider.last,
-			diff = value - last.value,
-			direction = (Math.abs(diff) == diff) ? 1 : -1,
-			bound = last.bounds[direction];
-		
-		if (direction == 1 && value >= bound || direction == -1 && value <= bound) {
-			slider.knob.setStyle(slider.property, bound);
-			last.direction = direction;
-			
-			var boundStep = slider.toStep(bound);
-			if(slider.step != boundStep){
-				slider.step = boundStep;
-				slider.checkStep();
-			}
-		}
-		else {
-			slider.draggedKnob();
-			last.value = value;
-		}
-		
-		return this;
-	},
-	
-	addKnob: function(knob, options, internal){
-		var self = this,
-			slider = new Slider(
-				this.element,
-				knob.setStyles({ 'position': 'absolute', 'z-index': 3 }).inject(this.element),
-				$merge({}, this.options, options || {}, { wheel: false, mode: this.options.mode })
-			).addEvents({
-				beforeStart: function(knob, event){
-					self.raiseKnob(knob);
-					self.setLast(this, event);
-				},
-				start: function(knob, event){
-					this.draggedKnob();
-					self.setLast(this, event);
-				},
-				drag: function(knob, event){
-					self.detectCollision(this, event);
-				},
-				complete: function(){
-					this.step = this.toStep(this.knob.getStyle(this.property).toInt());
-				}
-			}).detach();
-		
-		slider.last = {};
-		slider.drag.attach().removeEvents('complete').addEvent('complete', function(knob, event){
-			slider.isDragging = false;
-			self.detectCollision(slider, event);
-			slider.end()
-		});
-		
-		knob.store('slider', slider);
-		this.sliders.push(slider);
-		
-		return (internal) ? slider : slider.knob;
-	},
-	
-	addRange: function(options){
-		var options = this.getRangeOptions(options),
-			start = this.addKnob(options.start.knob, options.start, true),
-			end = this.addKnob(options.end.knob, options.end, true),
-			band = new Element('div', $merge({
-				'class': 'slider_band',
-				'styles': {
-					position: 'absolute',
-					height: this.mode[0],
-					width: this.mode[1],
-					background: this.options.rangeBackground,
-					zIndex: 1
-				}
-			}, options.band || {})),
-			range = {
-				'band': band,
-				'knobs': {
-					'start': start.knob,
-					'end': end.knob
-				},
-				'sliders': {
-					'start': start,
-					'end': end
-				}
-			};
-		
-		start.relatedSlider = end;
-		end.relatedSlider = start;
-		
-		this.attachResize(range);
-		$$(start.knob, end.knob, band).store('range', range);
-		
-		this.bands.push(band.inject(this.element));
-		
-		return this;
-	},
-	
-	getRangeOptions: function(options){
-		options.start = $merge(options.start, options);
-		options.end = $merge(options.end, options);
-		
-		if(options.end.initialStep < options.start.initialStep) options.end.initialStep = options.start.initialStep;
-		
-		return options;
-	},
-	
-	raiseKnob: function(knob){
-		this.sliders.each(function(e){ e.knob.setStyle('z-index', 3) });
-		knob.setStyle('z-index', 4);
-		
-		var range = knob.retrieve('range');
-		if(range){
-			this.bands.each(function(band){ band.setStyle('z-index', 1) });
-			range.band.setStyle('z-index', 2);
-		}
-		
-		return this;
-	},
-	
-	attachResize: function(range){
-		['start', 'end'].each(function(knob, i){
-			var resize = this[knob + 'Resize'].pass([range.sliders[knob], range.band]);
-			range.sliders[knob].drag.addEvent('drag', resize);
-			resize();	
-		}, this);
-		
-		return this;
-	},
-	
-	startResize: function(slider, band){
-		band.setStyle(slider.property, slider.knob.getStyle(slider.property));
-		return this;
-	},
-	
-	endResize: function(slider, band){
-		band.setStyle(this.mode[2], this.element.getSize()[this.mode[3]] - slider.knob.getCoordinates(this.element)[this.mode[2]]);
-		return this;
-	}
-
-});
-
-
-var langText = {};
-langText.tprop = 'Results';
-langText.price = 'Price';
-langText.nolimit = 'No Limit';
-langText.pid = 'Property ID';
-langText.street = '<div>Street<span class="street_preview">(Click address to view listing)</span></div>';
-langText.beds = 'Beds';
-langText.baths = 'Baths';
-langText.sqft = 'Ft<sup>2</sup>';
-langText.preview = 'Preview';
-langText.more = 'more';
-langText.inputText = 'ID or Keyword';
-langText.noRecords = 'Sorry, no records were found. Please try again.';
-langText.previous = '&#706; Previous ';
-langText.next = 'Next &#707;';
-langText.of = 'of';
-
-
-
-
-/*
- *
- *
-    End Slider.Extra Class
- *
- *
- */
-
-
 var PropertyWidget = new Class({
 	
 	Implements: [Events, Chain, Options],
@@ -488,6 +19,23 @@ var PropertyWidget = new Class({
 		currencySymbol: '$',
 		currencyPosition: 1, 
 		marker: 'http://demo.thethinkery.net/components/com_iproperty/assets/images/map/icon56.png',
+		text: {
+			tprop: 'Results',
+			price: 'Price',
+			nolimit: 'No Limit',
+			pid: 'Property ID',
+			street: '<div>Street<span class="street_preview">(Click address to view listing)</span></div>',
+			beds: 'Beds',
+			baths: 'Baths',
+			sqft: 'Ft<sup>2</sup>',
+			preview: 'Preview',
+			more: 'more',
+			inputText: 'ID or Keyword',
+			noRecords: 'Sorry, no records were found. Please try again.',
+			previous: '&#706 Previous ',
+			next: 'Next &#707',
+			of: 'of'
+		},
 		map: {
 			zoom: 10,
 			mapTypeId: google.maps.MapTypeId.ROADMAP, 
@@ -516,10 +64,41 @@ var PropertyWidget = new Class({
 				events: {
 					'change': function(event, element){
 						// console.log(this, event, element);
-						// this == the class instance, as opposed to the element,
-						// the element is passed as the second argument instead.
+						// 'this' will refer to the class instance within these events, as opposed to the element,
+						// as it usually does in Element events. The element is passed as the second argument.
 					}
 				}
+			},
+			'Lot and Land': {
+				tag: 'input',
+				type: 'checkbox',
+				parameter: 'ptype',
+				custom: true,
+				value: 3
+			},
+			'Multi-Family': {
+				tag: 'input',
+				type: 'checkbox',
+				parameter: 'ptype',
+				custom: true,
+				value: 2
+			},
+			'Residential': {
+				tag: 'input',
+				type: 'checkbox',
+				parameter: 'ptype',
+				custom: true,
+				value: 1
+			},
+			'REO': {
+				tag: 'input',
+				type: 'checkbox',
+				parameter: 'reo'
+			},
+			'HOA': {
+				tag: 'input',
+				type: 'checkbox',
+				parameter: 'hoa'
 			},
 			'Water Front': {
 				tag: 'input',
@@ -624,18 +203,25 @@ var PropertyWidget = new Class({
 		this.slidersElement = new Element('div', {id: 'property_sliders'});
 		this.attributesPanel = new Element('div', {
 			id: 'property_attributes',
-			html: '<div class="property_attributes_inputs"></div><div class="property_attributes_button gradient-button">Search Options</div>',
+			html: '<div class="property_attributes_wrap"><div class="property_attributes_inputs"></div></div><div class="property_attributes_button gradient-button">Search Options</div>',
 			events: {
 				'click:relay(div.property_attributes_button)': function(){
-					if(!this.hasClass('pressed')) this.addClass('pressed').getPrevious().set('tween', { duration: 250, transition: 'circ:out' }).tween('height', 60);
-					else this.removeClass('pressed').getPrevious().tween('height', 0);
+					var inputs = this.getPrevious().getFirst();
+					if(!this.hasClass('pressed')) {
+						this.addClass('pressed');
+						inputs.reveal();
+					}
+					else{
+						this.removeClass('pressed');
+						inputs.dissolve();
+					}
 				}
 			}
 		});
-		
+		this.attributesPanel.getFirst().getFirst().set('reveal', { duration: 250, transition: 'circ:out' });
 		this.propertyList = new Element('div', {id: 'property_list'});
-		
 		this.element.adopt(this.mapElement, this.slidersElement, this.attributesPanel, this.propertyList);
+		
 		this.createMap();
 		
 		$each(this.options.inputs, function(v, k){
@@ -662,7 +248,8 @@ var PropertyWidget = new Class({
 		this.options.map.center = new google.maps.LatLng(this.options.map.lat, this.options.map.lng);
 		this.mapInstance = new google.maps.Map(this.mapElement, this.options.map);
 		this.infoWindow = new google.maps.InfoWindow({ maxWidth: 450 });
-		this.loadingElement = new Element('div',{id:'loading_div'}).inject(this.mapElement);
+		this.mapSpinner = new Element('div',{id:'loading_div'}).inject(this.mapElement);
+		this.mapCounter = new Element('span', { id: 'property_counter' }).inject(this.mapElement);
 	},
 	
 	createMarker: function(house) {
@@ -693,21 +280,18 @@ var PropertyWidget = new Class({
 				city: house.city.clean(),
 				short_description: house.short_description.slice(0,185).trim() + '...',
 				thumb: ('<div class="bubble_image"><a href="{proplink}">{thumb}</a></div>').substitute(house),
-				pid: langText.pid,
-				price: langText.price,
-				more: langText.more
+				pid: this.options.text.pid,
+				price: this.options.text.price,
+				more: this.options.text.more
 			})
 		);
 	},
 	
 	addInput: function(title, options){
 		var self = this,
-			input = new Element(options.tag, {
-				'title': title,
-				'type': options.type || null,
-				'parameter': options.parameter,
-				'events': $H(options.events || {}).map(function(fn){ return function(e){ fn.call(self, e, this) }; }) 
-			}).inject(this.attributesPanel.getFirst());
+			input = new Element(options.tag, $merge({ 'title': title }, options, {
+				'events': $H(options.events || {}).map(function(fn){ return function(e){ fn.call(self, e, this) }; })
+			})).inject(this.attributesPanel.getFirst().getFirst());
 			
 		input.addEvent('change', function(){
 			if(self.request){
@@ -725,7 +309,6 @@ var PropertyWidget = new Class({
 					}).inject(input);
 				});
 			break;
-			
 			case 'checkbox': new Element('label', { text: title, value: options.value }).wraps(input); break;
 		}
 		
@@ -774,8 +357,8 @@ var PropertyWidget = new Class({
 		//$('advmap_counter').set('html', totalCount);
 		
 		['price', 'pid', 'street', 'beds', 'baths', 'sqft', 'preview'].each(function(e){
-			tableHeaders.push({ content: langText[e] });
-		});
+			tableHeaders.push({ content: this.options.text[e] });
+		}, this);
 		
 		this.table = new HtmlTable({
 			properties: {
@@ -858,23 +441,30 @@ var PropertyWidget = new Class({
 	},
 	
 	getSliderValues: function(){
-		var parameters = {};
+		var query = {};
 		this.slidersElement.getElements('div.slider_knob').retrieve('slider').each(function(slider){
-			parameters[slider.options.parameter] = slider.previousChange;
+			query[slider.options.parameter] = slider.previousChange;
 		});
-		return parameters;
+		return query;
 	},
 	
 	getInputValues: function(){
-		var parameters = {};
+		var query = {};
 		this.attributesPanel.getElements('[parameter]').each(function(input){
-			parameters[input.get('parameter')] = (input.get('type') == 'checkbox') ? ((input.checked) ? 1 : 0) : input.value;
+			var param = input.get('parameter'),
+				type = input.get('type'),
+				isCustom = !!input.get('custom'),
+				value = (isCustom) ? ((query[param]) ? ',' : '') + input.value : (type == 'checkbox') ? 1 : input.value,
+				blank = (isCustom) ? '' : 0;
+			
+			// The following line is way more hard-coded that it should be; required to accomodate specific API choices for ptype parameter values
+			query[param] = (query[param] || '') + ((type == 'checkbox') ? ((input.checked) ? value : blank) : value);
 		});
-		return parameters;
+		return query;
 	},
 	
 	search: function(){
-		this.loadingElement.show();
+		this.mapSpinner.show();
 		this.query = $merge(this.options.search, { //get the value of the form elements associated with the search options
 				limitstart: this.page * this.options.search.limit - this.options.search.limit
 			},
@@ -889,11 +479,6 @@ var PropertyWidget = new Class({
 			//waterfront: this.options.showWf ?this.waterfrontInput.checked ? 1:0 : '',
 			
 			/*
-			baths_high	10
-			baths_low	0
-			beds_high	10
-			beds_low	0
-			c6435f61d0313bf5eace0fab1...	1
 			city	
 			country	
 			county	
@@ -903,25 +488,16 @@ var PropertyWidget = new Class({
 			limitstart	0
 			locstate	
 			option	com_iproperty
-			price_high	
-			price_low	
 			province	
 			ptype	
 			region	
 			reo	0
 			search	
-			sqft_high	10000
-			sqft_low	800
 			stype	
 			task	ajaxSearch
 			view	advsearch
 			waterfront	0
 			*/
-		
-		/* var ptype = $$("[name=ptype[]]");
-		if(ptype) this.query.ptype = ptype.map(function(e){
-						if(e.checked) return e.value;
-					}).join(','); */
 
 		this.request.send({data: this.query});
 	},
@@ -930,10 +506,11 @@ var PropertyWidget = new Class({
 		this.fireEvent('requestComplete');
 		this.results = data;
 		this.totalCount = data[0].totalcount;
+		this.mapCounter.set('html', this.totalCount || 0);
 		this.updateMap(data);
 		this.updateTable(data);
 		this.updatePaging(data);
-		this.loadingElement.hide();
+		this.mapSpinner.hide();
 	},
 	
 	updateMap: function(data){
@@ -963,7 +540,7 @@ var PropertyWidget = new Class({
 						e.beds,
 						e.baths,
 						e.sqft,
-						(hasMarker) ? '<a resultid="' + e.id + '" href="#preview_'+ e.id +'" preview="click">' + langText.preview + '</a>' : '--'
+						(hasMarker) ? '<a resultid="' + e.id + '" href="#preview_'+ e.id +'" preview="click">' + this.options.text.preview + '</a>' : '--'
 					];
 				tableRows.push(row);
 				
@@ -971,7 +548,7 @@ var PropertyWidget = new Class({
 		}
 		else {
 			tableRows.push([{
-				content: langText.noRecords,
+				content: this.options.text.noRecords,
 				properties: {
 					'colspan': 7,
 					'align': 'center'
@@ -991,15 +568,15 @@ var PropertyWidget = new Class({
 			prevLimit = (this.page * options.limit - options.limit).limit(0, this.totalCount),
 			nextLimit = (this.page * options.limit).limit(0, this.totalCount),
 			pagingData = {
-				pagecount: langText.tprop + ': ' + prevLimit + '-' + nextLimit + ' ' + langText.of + ' ' + this.totalCount,
+				pagecount: this.options.text.tprop + ': ' + prevLimit + ' - ' + nextLimit + ' ' + this.options.text.of + ' ' + this.totalCount,
 				previous: this.options.templates.pageButton.substitute({
 					'class': 'previous_page',
-					'value': langText.previous,
+					'value': this.options.text.previous,
 					'display': (!prevLimit) ? 'none' : 'block'
 				}),
 				next: this.options.templates.pageButton.substitute({
 					'class': 'next_page',
-					'value': langText.next,
+					'value': this.options.text.next,
 					'display': (nextLimit == this.totalCount) ? 'none' : 'block'
 				})
 			};
@@ -1057,17 +634,4 @@ new PropertyWidget('maincontent-block', {
 });
 
 });
-/*
-Notes:
-langText is a global object. Though it's wrongly declaired as an Array. It just has localization strings for labels. 
-
-We should probably break this thing into two parts:
-1. The part that modifies and sends the ajax search
-	- this part should be a Request instance declared in the initilization fn
-	  that is attached to the Class reference, we can distribute any of that Request
-	  instance's methods to the Class that we want, send for instance, could map to a
-	  wrapped version that the Class augments.
-2. The part that updates the google map and places the markers.
-
-*/
 

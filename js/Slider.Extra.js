@@ -1,3 +1,4 @@
+
 /*
 ---
 
@@ -108,26 +109,24 @@ Slider.Extra = new Class({
 			slider = new Slider(
 				this.element,
 				knob.setStyles({ 'position': 'absolute', 'z-index': 3 }).inject(this.element),
-				$merge({}, this.options, options || {}, {
-					wheel: false,
-					mode: this.options.mode,
-					onBeforeStart: function(knob, event){
-						self.raiseKnob(knob);
-						self.setLast(this, event);
-					},
-					onStart: function(knob, event){
-						this.draggedKnob();
-						self.setLast(this, event);
-					},
-					onDrag: function(knob, event){
-						self.detectCollision(this, event);
-					},
-					onComplete: function(){
-						this.step = this.toStep(this.knob.getStyle(this.property).toInt());
-					}
-				})
-			).detach();
-			
+				$merge({}, this.options, options || {}, { wheel: false, mode: this.options.mode })
+			).addEvents({
+				beforeStart: function(knob, event){
+					self.raiseKnob(knob);
+					self.setLast(this, event);
+				},
+				start: function(knob, event){
+					this.draggedKnob();
+					self.setLast(this, event);
+				},
+				drag: function(knob, event){
+					self.detectCollision(this, event);
+				},
+				complete: function(){
+					this.step = this.toStep(this.knob.getStyle(this.property).toInt());
+				}
+			}).detach();
+		
 		slider.last = {};
 		slider.drag.attach().removeEvents('complete').addEvent('complete', function(knob, event){
 			slider.isDragging = false;
@@ -141,12 +140,13 @@ Slider.Extra = new Class({
 		return (internal) ? slider : slider.knob;
 	},
 	
-	addRange: function(start, end, options){
+	addRange: function(options){
 		var options = this.getRangeOptions(options),
-			start = this.addKnob(start, options.start, true),
-			end = this.addKnob(end, options.end, true),
-			band = new Element('div', Object.merge({
-				styles: {
+			start = this.addKnob(options.start.knob, options.start, true),
+			end = this.addKnob(options.end.knob, options.end, true),
+			band = new Element('div', $merge({
+				'class': 'slider_band',
+				'styles': {
 					position: 'absolute',
 					height: this.mode[0],
 					width: this.mode[1],
@@ -177,6 +177,15 @@ Slider.Extra = new Class({
 		return this;
 	},
 	
+	getRangeOptions: function(options){
+		options.start = $merge(options.start, options);
+		options.end = $merge(options.end, options);
+		
+		if(options.end.initialStep < options.start.initialStep) options.end.initialStep = options.start.initialStep;
+		
+		return options;
+	},
+	
 	raiseKnob: function(knob){
 		this.sliders.each(function(e){ e.knob.setStyle('z-index', 3) });
 		knob.setStyle('z-index', 4);
@@ -188,17 +197,6 @@ Slider.Extra = new Class({
 		}
 		
 		return this;
-	},
-	
-	getRangeOptions: function(options){
-		var options = options || { start: {}, end: {}, band: {} };
-		
-		$merge(options.start, options);
-		$merge(options.end, options);
-		
-		if(options.end.initialStep < options.start.initialStep) options.end.initialStep = options.start.initialStep;
-		
-		return options;
 	},
 	
 	attachResize: function(range){
