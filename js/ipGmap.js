@@ -597,19 +597,23 @@ var PropertyWidget = new Class({
 	
 });
 
-new PropertyWidget('maincontent-block', {
-	ipbaseurl: 'http://demo.thethinkery.net/',
-	sliderLength: 300,
-	itemId: 99999,
-	showPreview: 1,
-	noLimit: 0,
-	showPreview: 1,
-	currencySymbol: '$',
-	currencyPos: 0,
-	currencyFormat: 1,
-	maxZoom: 21,
-	thumbnail: 1,
-	search: {
-		limit: 3
-	}
+window.addEvent('domready', function(){
+
+	new PropertyWidget('maincontent-block', {
+		ipbaseurl: 'http://demo.thethinkery.net/',
+		sliderLength: 300,
+		itemId: 99999,
+		showPreview: 1,
+		noLimit: 0,
+		showPreview: 1,
+		currencySymbol: '$',
+		currencyPos: 0,
+		currencyFormat: 1,
+		maxZoom: 21,
+		thumbnail: 1,
+		search: {
+			limit: 3
+		}
+	});
+
 });
