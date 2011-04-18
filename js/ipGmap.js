@@ -220,7 +220,7 @@ var PropertyWidget = new Class({
 		});
 		this.attributesPanel.getFirst().getFirst().set('reveal', { duration: 250, transition: 'circ:out' });
 		this.propertyList = new Element('div', {id: 'property_list'});
-		this.element.adopt(this.mapElement, this.slidersElement, this.attributesPanel, this.propertyList);
+		this.element.adopt([this.mapElement, this.slidersElement, this.attributesPanel, this.propertyList]);
 		
 		this.createMap();
 		
