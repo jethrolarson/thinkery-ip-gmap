@@ -109,7 +109,8 @@ var PropertyWidget = new Class({
 		sliders: {
 			'Price': {
 				steps: 300,
-				range: [500, 800000], 
+				range: [500, 800000],
+				noLimit: true,
 				labelUnit: '$',
 				start: {
 					parameter: 'price_low',
@@ -327,13 +328,15 @@ var PropertyWidget = new Class({
 			start: {
 				knob: elements.getElement('.slider_knob_start'),
 				onChange: function(step){
-					minLabel.set('text', (options.labelUnit || '') + step);
+					var opt = this.options;
+					minLabel.set('text', (opt.noLimit && opt.range.contains(this.previousChange)) ? 'No Limit' : (opt.labelUnit || '') + step);
 				},
 			},
 			end: {
 				knob: elements.getElement('.slider_knob_end'),
 				onChange: function(step){
-					maxLabel.set('text', (options.labelUnit || '') + step);
+					var opt = this.options;
+					maxLabel.set('text', (opt.noLimit && opt.range.contains(this.previousChange)) ? 'No Limit' : (opt.labelUnit || '') + step);
 				}
 			},
 			onComplete: function(){
@@ -443,7 +446,8 @@ var PropertyWidget = new Class({
 	getSliderValues: function(){
 		var query = {};
 		this.slidersElement.getElements('div.slider_knob').retrieve('slider').each(function(slider){
-			query[slider.options.parameter] = slider.previousChange;
+			var opt = slider.options;
+			query[opt.parameter] = (opt.noLimit && opt.range.contains(slider.previousChange)) ? '' : slider.previousChange;
 		});
 		return query;
 	},
