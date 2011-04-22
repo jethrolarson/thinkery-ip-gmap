@@ -167,7 +167,7 @@ var PropertyWidget = new Class({
 						'<div class="slider_labels">' +
 							'<span class="slider_label_min">No Limit</span>{title}<span class="slider_label_max">No Limit</span>' +
 						'</div>' +
-						'<div class="slider_element">' +
+						'<div class="slider_element pressed">' +
 							'<div class="slider_knob slider_knob_start"></div>' +
 							'<div class="slider_knob slider_knob_end"></div>' +
 						'</div>' +
