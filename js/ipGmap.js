@@ -495,7 +495,7 @@ var PropertyWidget = new Class({
 		
 		this.bounds = new google.maps.LatLngBounds();
 		data.each(this.createMarker);
-		this.mapInstance.fitBounds(this.bounds);
+		if(this.totalCount > 0) this.mapInstance.fitBounds(this.bounds);
 		
 		return this;
 	},
