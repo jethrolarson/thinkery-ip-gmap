@@ -25,14 +25,14 @@
 .pressed
 {
 	border-color: #aaa #bbb #ccc !important;
-	background: -moz-linear-gradient(#F0F0FF, #E0E0EE) !important;
-	background: -ms-linear-gradient(#F0F0FF, #E0E0EE) !important;
-	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #F0F0FF), color-stop(100%, #E0E0EE)) !important;
-	background: -webkit-linear-gradient(#F0F0FF, #E0E0EE) !important;
-	background: -o-linear-gradient(#F0F0FF, #E0E0EE) !important;
-	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#F0F0FF', endColorstr='#E0E0EE') !important;
-	-ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr='#F0F0FF', endColorstr='#E0E0EE')" !important;
-	background: linear-gradient(#F0F0FF, #E0E0EE) !important;
+	background: -moz-linear-gradient(#E0E0EE, #F0F0FF) !important;
+	background: -ms-linear-gradient(#E0E0EE, #F0F0FF) !important;
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #E0E0EE), color-stop(100%, #F0F0FF)) !important;
+	background: -webkit-linear-gradient(#E0E0EE, #F0F0FF) !important;
+	background: -o-linear-gradient(#E0E0EE, #F0F0FF) !important;
+	filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#E0E0EE', endColorstr='#F0F0FF') !important;
+	-ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr='#E0E0EE', endColorstr='#F0F0FF')" !important;
+	background: linear-gradient(#E0E0EE, #F0F0FF) !important;
 }
 
 #mainbody-surround

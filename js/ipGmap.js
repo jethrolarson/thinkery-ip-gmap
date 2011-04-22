@@ -7,9 +7,6 @@ var PropertyWidget = new Class({
 	
 	options: {
 		ipbaseurl: '',
-		showHoa: false,
-		showReo: false,
-		showWf: false,
 		sliderLength: 300,
 		itemId: 150,
 		showPreview: 1,
@@ -357,8 +354,6 @@ var PropertyWidget = new Class({
 		var options = this.options.search,
 			tableHeaders = [];
 		
-		//$('advmap_counter').set('html', totalCount);
-		
 		['price', 'pid', 'street', 'beds', 'baths', 'sqft', 'preview'].each(function(e){
 			tableHeaders.push({ content: this.options.text[e] });
 		}, this);
@@ -475,33 +470,6 @@ var PropertyWidget = new Class({
 			this.getSliderValues(),
 			this.getInputValues()
 		);
-			//,
-			//$H(this.inputs).map(function(e){ return e.value; })
-			//stype: this.stypeInput.value,
-			//hoa: this.options.showHoa ? this.hoaInput.checked ? 1:0 :'',
-			//reo: this.options.showReo ?this.reoInput.checked ? 1:0 : '',
-			//waterfront: this.options.showWf ?this.waterfrontInput.checked ? 1:0 : '',
-			
-			/*
-			city	
-			country	
-			county	
-			format	raw
-			hoa	0
-			limit	10
-			limitstart	0
-			locstate	
-			option	com_iproperty
-			province	
-			ptype	
-			region	
-			reo	0
-			search	
-			stype	
-			task	ajaxSearch
-			view	advsearch
-			waterfront	0
-			*/
 
 		this.request.send({data: this.query});
 	},
