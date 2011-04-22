@@ -266,6 +266,8 @@ var PropertyWidget = new Class({
 				this.openInfoWindow(house.id);
 			}.bind(this));
 			
+			this.bounds.extend(latlong);
+			
 			return marker;
 		}
 		else return false;
@@ -490,7 +492,11 @@ var PropertyWidget = new Class({
 			marker[0].setMap(null);
 			delete markers[id];
 		});
+		
+		this.bounds = new google.maps.LatLngBounds();
 		data.each(this.createMarker);
+		this.mapInstance.fitBounds(this.bounds);
+		
 		return this;
 	},
 	
