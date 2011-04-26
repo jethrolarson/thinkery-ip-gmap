@@ -569,9 +569,9 @@ var PropertyWidget = new Class({
 		this.infoWindow.setContent(marker[1])
 		this.infoWindow.open(this.mapInstance, marker[0]);
 	}
-	*/
+	
 });
-/*
+
 window.addEvent('domready', function(){
 
 	new PropertyWidget('maincontent-block', {
@@ -592,4 +592,3 @@ window.addEvent('domready', function(){
 	});
 
 });
-*/
