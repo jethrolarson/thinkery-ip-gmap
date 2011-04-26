@@ -181,7 +181,7 @@ var PropertyWidget = new Class({
 	},
 	
 	initialize: function(element, options){
-	/*
+	
 		this.setOptions(options);
 		
 		this.element = $(element);
@@ -238,7 +238,7 @@ var PropertyWidget = new Class({
 		});
 		
 		this.search();
-	*/	
+		
 	} /*,
 	
 	createMap: function(){
