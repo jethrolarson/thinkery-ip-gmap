@@ -181,6 +181,7 @@ var PropertyWidget = new Class({
 	},
 	
 	initialize: function(element, options){
+	/*
 		this.setOptions(options);
 		
 		this.element = $(element);
@@ -234,15 +235,13 @@ var PropertyWidget = new Class({
 			method: 'get',
 			url: this.options.ipbaseurl + 'index.php',
 			onComplete: this.requestComplete
-			//Shouldn't we have handlers for errors? --> Sure! Wanna add one?
 		});
 		
 		this.search();
-		
-	},
+	*/	
+	} /*,
 	
 	createMap: function(){
-		//Do we want to try to get GEO?
 		this.options.map.center = new google.maps.LatLng(this.options.map.lat, this.options.map.lng);
 		this.mapInstance = new google.maps.Map(this.mapElement, this.options.map);
 		this.infoWindow = new google.maps.InfoWindow({ maxWidth: 450 });
@@ -418,7 +417,6 @@ var PropertyWidget = new Class({
 		return this;
 	},
 	
-	/*
 	formatCurrency: function(num) {
 		var symbol = this.options.currencySymbol,
 			split = (num + '').split('.'),
@@ -431,7 +429,6 @@ var PropertyWidget = new Class({
 		
 		return (this.options.currencyPosition == 1) ? num + ' ' + symbol : symbol + num;
 	},
-	*/
 	
 	checkLimit: function(page){
 		var limit = this.options.search.limit,
@@ -572,9 +569,9 @@ var PropertyWidget = new Class({
 		this.infoWindow.setContent(marker[1])
 		this.infoWindow.open(this.mapInstance, marker[0]);
 	}
-	
+	*/
 });
-
+/*
 window.addEvent('domready', function(){
 
 	new PropertyWidget('maincontent-block', {
@@ -595,3 +592,4 @@ window.addEvent('domready', function(){
 	});
 
 });
+*/
