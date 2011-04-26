@@ -270,7 +270,7 @@ var PropertyWidget = new Class({
 			return marker;
 		}
 		else return false;
-	}/*,
+	},
 	 
 	getMarkerHtml: function(house) {
 		return this.options.templates.infoWindow.substitute(
@@ -314,7 +314,7 @@ var PropertyWidget = new Class({
 		this.inputs.push(input);
 		
 		return this;
-	},
+	}/*,
 	
 	addSlider: function(title, options){
 		var elements = Elements.from(this.options.templates.slider.substitute({title: title}))[0].inject(this.slidersElement),
