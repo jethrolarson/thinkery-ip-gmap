@@ -239,7 +239,7 @@ var PropertyWidget = new Class({
 		
 		this.search();
 		
-	} /*,
+	},
 	
 	createMap: function(){
 		this.options.map.center = new google.maps.LatLng(this.options.map.lat, this.options.map.lng);
@@ -270,8 +270,8 @@ var PropertyWidget = new Class({
 			return marker;
 		}
 		else return false;
-	},
-	
+	}/*,
+	 
 	getMarkerHtml: function(house) {
 		return this.options.templates.infoWindow.substitute(
 			$merge(house, {
