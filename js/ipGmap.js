@@ -1,3 +1,6 @@
+var logs = [];
+
+logs.push('before definition');
 
 var PropertyWidget = new Class({
 	
@@ -181,6 +184,9 @@ var PropertyWidget = new Class({
 	},
 	
 	initialize: function(element, options){
+	
+		logs.push('start initialize');
+		
 		this.setOptions(options);
 		
 		this.element = $(element);
