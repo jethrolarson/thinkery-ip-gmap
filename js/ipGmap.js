@@ -314,7 +314,7 @@ var PropertyWidget = new Class({
 		this.inputs.push(input);
 		
 		return this;
-	}/*,
+	},
 	
 	addSlider: function(title, options){
 		var elements = Elements.from(this.options.templates.slider.substitute({title: title}))[0].inject(this.slidersElement),
@@ -380,7 +380,7 @@ var PropertyWidget = new Class({
 		this.createPaging();
 		
 		return this;
-	},
+	}/*,
 	
 	createPaging: function(){
 		var pagingClick = {
