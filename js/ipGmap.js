@@ -328,7 +328,7 @@ var PropertyWidget = new Class({
 				onChange: function(step){
 					var opt = this.options;
 					minLabel.set('text', (opt.noLimit && opt.range.contains(this.previousChange)) ? 'No Limit' : (opt.labelUnit || '') + step);
-				},
+				}
 			},
 			end: {
 				knob: elements.getElement('.slider_knob_end'),
@@ -380,7 +380,7 @@ var PropertyWidget = new Class({
 		this.createPaging();
 		
 		return this;
-	}/*,
+	},
 	
 	createPaging: function(){
 		var pagingClick = {
@@ -416,7 +416,7 @@ var PropertyWidget = new Class({
 			
 		return this;
 	},
-	
+	/*
 	formatCurrency: function(num) {
 		var symbol = this.options.currencySymbol,
 			split = (num + '').split('.'),
@@ -429,7 +429,7 @@ var PropertyWidget = new Class({
 		
 		return (this.options.currencyPosition == 1) ? num + ' ' + symbol : symbol + num;
 	},
-	
+	*/
 	checkLimit: function(page){
 		var limit = this.options.search.limit,
 			max = page * limit;
