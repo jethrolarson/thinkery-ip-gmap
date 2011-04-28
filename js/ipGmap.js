@@ -35,6 +35,8 @@ var PropertyWidget = new Class({
 		},
 		map: {
 			zoom: 10,
+			maxZoom: 12,
+			streetViewControl: false,
 			mapTypeId: google.maps.MapTypeId.ROADMAP, 
 			lat: '47.6725282',
 			lng: '-116.7679661'
