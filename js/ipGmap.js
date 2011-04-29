@@ -529,7 +529,7 @@ var PropertyWidget = new Class({
 			}]);
 		}
 		
-		tableRows.each(this.table.push);
+		tableRows.each(this.table.push.bind(this.table));
 		
 		return this;
 	},
