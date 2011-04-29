@@ -7,11 +7,7 @@ var PropertyWidget = new Class({
 	
 	options: {
 		ipbaseurl: '',
-		sliderLength: 300,
-		itemId: 150,
-		showPreview: 1,
-		noLimit: 0,
-		startPage: 1,
+		showPreview: true,
 		currencySeparator: ',',
 		currencySymbol: '$',
 		currencyPosition: 1, 
@@ -513,7 +509,7 @@ var PropertyWidget = new Class({
 					row = [
 						e.formattedprice,
 						e.mls_id,
-						'<a resultid="' + e.id + '" href="' + e.proplink + '" ' + ((this.options.showPreview == 1 && hasMarker) ? 'preview="mouseover"' : '') + '>' + e.street_address.clean() + ', ' + e.city.clean() + '</a>',
+						'<a resultid="' + e.id + '" href="' + e.proplink + '" ' + ((this.options.showPreview && hasMarker) ? 'preview="mouseover"' : '') + '>' + e.street_address.clean() + ', ' + e.city.clean() + '</a>',
 						e.beds,
 						e.baths,
 						e.sqft,
@@ -533,9 +529,7 @@ var PropertyWidget = new Class({
 			}]);
 		}
 		
-		tableRows.each(function(row){
-			this.table.push(row);
-		}, this);
+		tableRows.each(this.table.push);
 		
 		return this;
 	},
@@ -567,7 +561,6 @@ var PropertyWidget = new Class({
 	
 	openInfoWindow: function(id) {
 		var marker = this.markers[id];
-		this.infoWindow.close();
 		this.infoWindow.setContent(marker[1])
 		this.infoWindow.open(this.mapInstance, marker[0]);
 	}
@@ -578,16 +571,6 @@ window.addEvent('domready', function(){
 
 	new PropertyWidget('maincontent-block', {
 		ipbaseurl: 'http://demo.thethinkery.net/',
-		sliderLength: 300,
-		itemId: 99999,
-		showPreview: 1,
-		noLimit: 0,
-		showPreview: 1,
-		currencySymbol: '$',
-		currencyPos: 0,
-		currencyFormat: 1,
-		maxZoom: 21,
-		thumbnail: 1,
 		search: {
 			limit: 3
 		}
