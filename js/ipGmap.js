@@ -302,7 +302,7 @@ var PropertyWidget = new Class({
 				(options.group) ? ($('property_fieldset_' + options.group) || new Element('fieldset', { id: 'property_fieldset_' + options.group }).inject(inputWrap)) : inputWrap
 			);
 			
-			input.addEvent((options.type == 'checkbox') ? 'mouseup' : 'change', change);
+		if(options.type != 'checkbox') input.addEvent('change', change);
 		
 		switch(options.type || options.tag){
 			case 'select':
@@ -313,7 +313,15 @@ var PropertyWidget = new Class({
 					}).inject(input);
 				});
 			break;
-			case 'checkbox': new Element('label', { text: title, value: options.value }).wraps(input); break;
+			case 'checkbox': 
+				new Element('label', {
+					text: title,
+					value: options.value,
+					events: {
+						'mouseup': change
+					}
+				}).wraps(input);
+			break;
 		}
 		
 		this.inputs.push(input);
