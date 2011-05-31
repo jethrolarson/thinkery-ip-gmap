@@ -290,18 +290,22 @@ var PropertyWidget = new Class({
 	addInput: function(title, options){
 		var self = this,
 			inputWrap = this.attributesPanel.getFirst().getFirst(),
+			change = function(){
+				if(self.request){
+					self.page = 1;
+					self.search();
+				}
+			},
 			input = new Element(options.tag, $merge({ 'title': title }, options, {
 				'events': $H(options.events || {}).map(function(fn){ return function(e){ fn.call(self, e, this) }; })
 			})).inject(
 				(options.group) ? ($('property_fieldset_' + options.group) || new Element('fieldset', { id: 'property_fieldset_' + options.group }).inject(inputWrap)) : inputWrap
 			);
 			
-		input.addEvent('change', function(){
-			if(self.request){
-				self.page = 1;
-				self.search();
-			}
-		});
+			input.addEvent.apply(input, (options.type == 'checkbox') ? 
+				['mouseup', function(){ if(!this.checked) change(); }] : 
+				['change', change]
+			);
 		
 		switch(options.type || options.tag){
 			case 'select':
