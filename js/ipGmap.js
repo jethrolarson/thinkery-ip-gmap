@@ -67,7 +67,7 @@ var PropertyWidget = new Class({
 			'Lot and Land': {
 				tag: 'input',
 				type: 'checkbox',
-				group: 'ptypes'
+				group: 'ptypes',
 				parameter: 'ptype',
 				custom: true,
 				value: 3
@@ -75,7 +75,7 @@ var PropertyWidget = new Class({
 			'Multi-Family': {
 				tag: 'input',
 				type: 'checkbox',
-				group: 'ptypes'
+				group: 'ptypes',
 				parameter: 'ptype',
 				custom: true,
 				value: 2
@@ -83,7 +83,7 @@ var PropertyWidget = new Class({
 			'Residential': {
 				tag: 'input',
 				type: 'checkbox',
-				group: 'ptypes'
+				group: 'ptypes',
 				parameter: 'ptype',
 				custom: true,
 				value: 1
