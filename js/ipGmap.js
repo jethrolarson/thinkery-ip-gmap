@@ -67,6 +67,7 @@ var PropertyWidget = new Class({
 			'Lot and Land': {
 				tag: 'input',
 				type: 'checkbox',
+				group: 'ptypes'
 				parameter: 'ptype',
 				custom: true,
 				value: 3
@@ -74,6 +75,7 @@ var PropertyWidget = new Class({
 			'Multi-Family': {
 				tag: 'input',
 				type: 'checkbox',
+				group: 'ptypes'
 				parameter: 'ptype',
 				custom: true,
 				value: 2
@@ -81,6 +83,7 @@ var PropertyWidget = new Class({
 			'Residential': {
 				tag: 'input',
 				type: 'checkbox',
+				group: 'ptypes'
 				parameter: 'ptype',
 				custom: true,
 				value: 1
@@ -286,9 +289,10 @@ var PropertyWidget = new Class({
 	
 	addInput: function(title, options){
 		var self = this,
+			inputWrap = this.attributesPanel.getFirst().getFirst(),
 			input = new Element(options.tag, $merge({ 'title': title }, options, {
 				'events': $H(options.events || {}).map(function(fn){ return function(e){ fn.call(self, e, this) }; })
-			})).inject(this.attributesPanel.getFirst().getFirst());
+			}));
 			
 		input.addEvent('change', function(){
 			if(self.request){
@@ -308,6 +312,8 @@ var PropertyWidget = new Class({
 			break;
 			case 'checkbox': new Element('label', { text: title, value: options.value }).wraps(input); break;
 		}
+		
+		input.inject((options.group) ? ($('property_fieldset_' + options.group) || new Element('fieldset', { id: 'property_fieldset_' + options.group }).inject(inputWrap)) : inputWrap);
 		
 		this.inputs.push(input);
 		
@@ -511,7 +517,7 @@ var PropertyWidget = new Class({
 						e.mls_id,
 						'<a resultid="' + e.id + '" href="' + e.proplink + '" ' + ((this.options.showPreview && hasMarker) ? 'preview="mouseover"' : '') + '>' + e.street_address.clean() + ', ' + e.city.clean() + '</a>',
 						e.beds,
-						e.baths,
+						'<div class="ip_centered baths">' + e.baths + '</div>',
 						e.sqft,
 						(hasMarker) ? '<a resultid="' + e.id + '" href="#preview_'+ e.id +'" preview="click">' + this.options.text.preview + '</a>' : '--'
 					];
