@@ -302,7 +302,7 @@ var PropertyWidget = new Class({
 				(options.group) ? ($('property_fieldset_' + options.group) || new Element('fieldset', { id: 'property_fieldset_' + options.group }).inject(inputWrap)) : inputWrap
 			);
 			
-		if(option.type != 'checkbox' && !Browser.Engine.trident) input.addEvent('change', change);
+		if(options.type != 'checkbox' && !Browser.Engine.trident) input.addEvent('change', change);
 		
 		switch(options.type || options.tag){
 			case 'select':
