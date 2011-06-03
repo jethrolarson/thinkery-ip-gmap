@@ -182,7 +182,9 @@ var PropertyWidget = new Class({
 	},
 	
 	initialize: function(element, options){
-	
+		
+		Element.NativeEvents.focusin = 2;
+		
 		this.setOptions(options);
 		
 		this.element = $(element);
