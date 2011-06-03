@@ -318,7 +318,10 @@ var PropertyWidget = new Class({
 					value: options.value,
 					events: {
 						'mouseup': function(){
-							this.getFirst().blur().focus();
+							var first = this.getFirst();
+							console.log(this, first);
+							first.blur();
+							first.focus();
 						}
 					}
 				}).wraps(input);
