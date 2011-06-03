@@ -302,7 +302,7 @@ var PropertyWidget = new Class({
 				(options.group) ? ($('property_fieldset_' + options.group) || new Element('fieldset', { id: 'property_fieldset_' + options.group }).inject(inputWrap)) : inputWrap
 			);
 			
-		if(options.type == 'checkbox' && Browser.Engine.trident);
+		if(options.type == 'checkbox' && Browser.Engine.trident) input.addEvent('focusin', change);
 		else input.addEvent('change', change);
 		
 		switch(options.type || options.tag){
@@ -317,12 +317,7 @@ var PropertyWidget = new Class({
 			case 'checkbox': 
 				new Element('label', {
 					text: title,
-					value: options.value,
-					events: {
-						'mouseup': function(){
-							if(Browser.Engine.trident) change();
-						}
-					}
+					value: options.value
 				}).wraps(input);
 			break;
 		}
