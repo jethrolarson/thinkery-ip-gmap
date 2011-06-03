@@ -290,19 +290,18 @@ var PropertyWidget = new Class({
 	addInput: function(title, options){
 		var self = this,
 			inputWrap = this.attributesPanel.getFirst().getFirst(),
-			change = function(){
-				if(self.request){
-					self.page = 1;
-					self.search();
-				}
-			},
 			input = new Element(options.tag, $merge({ 'title': title }, options, {
 				'events': $H(options.events || {}).map(function(fn){ return function(e){ fn.call(self, e, this) }; })
 			})).inject(
 				(options.group) ? ($('property_fieldset_' + options.group) || new Element('fieldset', { id: 'property_fieldset_' + options.group }).inject(inputWrap)) : inputWrap
 			);
 			
-		if(options.type != 'checkbox') input.addEvent('change', change);
+		input.addEvent('change', function(){
+			if(self.request){
+				self.page = 1;
+				self.search();
+			}
+		});
 		
 		switch(options.type || options.tag){
 			case 'select':
@@ -318,7 +317,9 @@ var PropertyWidget = new Class({
 					text: title,
 					value: options.value,
 					events: {
-						'mouseup': change
+						'mouseup': function(){
+							this.getFirst().blur().focus();
+						}
 					}
 				}).wraps(input);
 			break;
